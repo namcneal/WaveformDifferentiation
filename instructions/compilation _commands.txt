@@ -1,0 +1,9 @@
+source ~/Programs/root*/bin/thisroot.sh
+g++ -Wall -O3 -o parser parser.cpp `root-config --cflags --glibs` -I/include -L/lib
+
+
+=======================================
+For parser specfically:
+
+./analysis/parser data/take103 15 200 0 n 3 f 
+(everything after the file path should not change for Take  103. For Take 104, change the 200 to 2000 because there are more ten times as many spills).

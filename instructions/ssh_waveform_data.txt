@@ -1,0 +1,6 @@
+ssh -Y root@141.211.98.128
+(password is "20121115")
+cd ~/DAQcodes/jsns/2017test
+(For 5000 MHz -- the one we're looking at -- use "take103.dat", "take104,dat" as the big ones.
+ Other ones are used for calibration, so I don't need those. There are also more analysis data 
+ files, but those were for different, past configs). 

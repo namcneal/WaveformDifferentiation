@@ -51,48 +51,60 @@ Requires the tail start parameter and a reference to an array of three doubles.
 Modifies the array of three doubles. The first entry is the ratios of all 
 particles. The second is the neutron ratio an the third is the photon. 
 */
-void mean_qval(string dataFileName, int tailStart, double* ratioArray,
+void mean_qval(string inputFileName, int tailStart, double* ratioArray,
 			   TH1D* bothHist, TH1D* neutronHist, TH1D* photonHist);
 
 int main(int argc, char **argv){	
 	
-	string dataFileName = argv[1];
+	string inputFileName = argv[1];
 
-	double mean_array[3] = {0,0,0};
-
-	TCanvas * canvas = new TCanvas("Tail vs Total Integration", "Both Particles' Tail/Total");
+//	TCanvas * canvas = new TCanvas("Tail vs Total Integration", "Both Particles' Tail/Total");
 //	TCanvas * neutronCanvas = new TCanvas("Tail vs Total Integration", "Neutron Tail/Total");
 //	TCanvas * photonCanvas = new TCanvas("Tail vs Total Integration", "Photon Tail/Total");
-//	
 	
+	string outputFileName = "variedTailQVals.root";
+	
+	double qValBoth = 0,
+		   qValNeutron = 0,
+		   qValPhoton = 0;
 	TH1D * bothHist = new TH1D("a_h", "All Particles' Total/Tail", 100, 0.0, 1.5);
 	TH1D * neutronHist = new TH1D("n_h", "Neutron Total/Tail", 100, 0.0, 1.5);
 	TH1D * photonHist = new TH1D("p_h", "Photon Total/Tail", 100, 0.0, 1.5);
+	
+	TFile f("../data/variedTail.root", "RECREATE");;
+	TTree * histograms = new TTree("Q_vals", "All the histograms.");
+	
+	histograms->Branch("qValBoth", &qValBoth);
+	histograms->Branch("qValNeutron", &qValNeutron);
+	histograms->Branch("qValPhoton", &qValPhoton);
+	histograms->Branch("bothHist", bothHist);
+	histograms->Branch("neutronHist", neutronHist);
+	histograms->Branch("photonHist", photonHist);
+	
+	double mean_array[3] = {0,0,0};
 
 	mean_qval(argv[1], 20, mean_array,
 			  bothHist, neutronHist, photonHist);
-			  
-	neutronHist->Draw();
-	
-	string plotName = DATA_FOLDER_PATH  + dataFileName + "_qval.pdf";
-	canvas->Print((plotName+"[").c_str(),"pdf");
-	
+	histograms->Fill();
+	f.Write();
+	f.Close();
+
 }
 
-void mean_qval(string dataFileName, int tailStart, double* ratioArray,
+void mean_qval(string inputFileName, int tailStart, double* ratioArray,
 			   TH1D* bothHist, TH1D* neutronHist, TH1D* photonHist){
 	string dataFolderPrefix = "../data/";
 	
-	TFile* par_file = new TFile((dataFolderPrefix + dataFileName + "_coarse_time.root").c_str(), "UPDATE");
-	TTree* par_tree =( TTree*)par_file->Get((dataFileName + "_coarse_time").c_str());
+	TFile* par_file = new TFile((dataFolderPrefix + inputFileName + "_coarse_time.root").c_str(), "UPDATE");
+	TTree* par_tree =( TTree*)par_file->Get((inputFileName + "_coarse_time").c_str());
 	if (!par_tree){
-		cout << "Could not find the " <<  dataFileName << "_coarse_time.root file" << endl;
+		cout << "Could not find the " <<  inputFileName << "_coarse_time.root file" << endl;
 	}
 	
-	TFile* raw_file = new TFile((dataFolderPrefix + dataFileName + "_raw_data.root").c_str(), "READ");
-	TTree* raw_tree = (TTree*)raw_file->Get(Form("%s_raw", dataFileName.c_str()));
+	TFile* raw_file = new TFile((dataFolderPrefix + inputFileName + "_raw_data.root").c_str(), "READ");
+	TTree* raw_tree = (TTree*)raw_file->Get(Form("%s_raw", inputFileName.c_str()));
 	if (!raw_tree){
-			cout << "Could not find the " <<  dataFileName << "raw_time.root file" << endl;
+			cout << "Could not find the " <<  inputFileName << "_raw_time.root file" << endl;
 		}
 
 	
@@ -122,7 +134,7 @@ void mean_qval(string dataFileName, int tailStart, double* ratioArray,
 
 	cout << "Getting entries.";
 	int n_tot=raw_tree->GetEntries();
-	cout<<"Read "<<n_tot<<" events from "<<dataFileName<<"_raw_data.root"<<endl;
+	cout<<"Read "<<n_tot<<" events from "<<inputFileName<<"_raw_data.root"<<endl;
 
 	TH1D* qval=new TH1D("qval","Distribution of tail Q/total Q; tail Q/total Q; counts", 100, 0., 2);
 	TH1D* qval_n=new TH1D("qval_n","Distribution of tail Q/total Q; tail Q/total Q; counts", 100, 0., 2);
@@ -144,6 +156,7 @@ void mean_qval(string dataFileName, int tailStart, double* ratioArray,
 			start_TDC/=2;
 
 			int tail_TDC=start_TDC+20;
+			cout << tail_TDC << endl;
 			int end_TDC=start_TDC+110;
 
 			double a_all=0.;

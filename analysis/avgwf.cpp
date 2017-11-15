@@ -43,7 +43,7 @@ const double fit_left=-20.;
 const double fit_right_long=200.;
 const double fit_right=75.;
 
-double langaufun(double *x, double *par) {
+double landaufun(double *x, double *par) {
 	//Fit parameters:
 	//par[0]=Width (scale) parameter of Landau density
 	//par[1]=Most Probable (MP, location) parameter of Landau density
@@ -171,7 +171,6 @@ void fit_func(TProfile* plot, TF1* func, int n_par, double* par_init, double* pa
 }
 
 int main(int argc, char **argv){
-	gROOT->Reset();
 	gStyle->SetOptStat(0);
 	gErrorIgnoreLevel = kWarning;
 	const Int_t NRGBs = 5;
@@ -183,22 +182,28 @@ int main(int argc, char **argv){
 	TColor::CreateGradientColorTable(NRGBs, stops, red, green, blue, NCont);
 	gStyle->SetNumberContours(NCont); 
 	
-	string name (argv[1]);
-	string plot_name=name+"_avg_wf.pdf";
+	cout << "Reading in the data and creating the trees" << endl;
+	string dataFileName = argv[1],
+		   dataFolderPath = "../data/";
+		   
+	string plot_name = dataFolderPath + dataFileName + "_avg_wf.pdf";
 	
-	TFile* par_file=new TFile((name+"_coarse_time.root").c_str(), "UPDATE");
-	TTree* par_tree=(TTree*)par_file->Get((name+"_coarse_time").c_str());
-	TFile* raw_file=new TFile((name+"_raw_data.root").c_str(), "READ");
-	TTree* raw_tree=(TTree*)raw_file->Get(Form("%s_raw", name.c_str()));
+	TFile* par_file=new TFile((dataFolderPath + dataFileName + "_coarse_time.root").c_str(), "UPDATE");
+	TTree* par_tree=(TTree*)par_file->Get((dataFileName + "_coarse_time").c_str());
+	
+	TFile* raw_file=new TFile((dataFolderPath + dataFileName+"_raw_data.root").c_str(), "READ");
+	TTree* raw_tree=(TTree*)raw_file->Get((dataFileName + "_raw").c_str());
 	
 	TCanvas* c0=new TCanvas("0", "", 3200, 1200);
 	c0->Divide(2,1);
 	c0->Print((plot_name+"[").c_str(),"pdf");
+	
 	double ped_n, ped_f, amp_n, amp_f, t_max_n, t_max_f, t_50_n, t_50_f;
 	int is_good_n, is_good_f;
 	int adc_n[N_width*32];
 	int adc_f[N_width*32];
 	
+	cout << "Setting branch addresses to read into." << endl;
 	par_tree->SetBranchAddress("ped_n", &ped_n);
 	par_tree->SetBranchAddress("ped_f", &ped_f);
 	par_tree->SetBranchAddress("amp_n", &amp_n);
@@ -214,7 +219,7 @@ int main(int argc, char **argv){
 	raw_tree->SetBranchAddress("f_quality", &is_good_f);
 	
 	int n_tot=raw_tree->GetEntries();
-	cout<<"Read "<<n_tot<<" events from "<<name<<"_raw_data.root"<<endl;
+	cout<<"Read "<<n_tot<<" events from "<<dataFileName<<"_raw_data.root"<<endl;
 	
 	TGraph* sct_pts_n=new TGraph();
 	sct_pts_n->SetTitle("Normalized Waveform: Neutron; time [ns]; Percentage");
@@ -368,19 +373,19 @@ int main(int argc, char **argv){
 	
 	string form2="A*NGaus(#sigma_{gaus})[conv]NLandau(x, #mu, #sigma_{land})";
 	
-	TF1 *langaus_n=new TF1("langaus_n",langaufun,fit_left,fit_right,4);
-	langaus_n->SetParNames("#sigma_{land}","#mu","A","#sigma_{gaus}");
+	TF1 *landaus_n=new TF1("landaus_n",landaufun,fit_left,fit_right,4);
+	landaus_n->SetParNames("#sigma_{land}","#mu","A","#sigma_{gaus}");
 	double par_init_2_n[4]={0.1,0.,100, 0.1};
 	double par_llim_2_n[4]={0.0001,-20.,0.,0.0001};
 	double par_hlim_2_n[4]={30.,200.,100000.,30.};
-	fit_func(avg_n, langaus_n, 4, par_init_2_n, par_llim_2_n, par_hlim_2_n, c3, 1, form2);
+	fit_func(avg_n, landaus_n, 4, par_init_2_n, par_llim_2_n, par_hlim_2_n, c3, 1, form2);
 	
-	TF1 *langaus_p=new TF1("langaus_p",langaufun,fit_left,fit_right,4);
-	langaus_p->SetParNames("#sigma_{land}","#mu","A","#sigma_{gaus}");
+	TF1 *landaus_p=new TF1("landaus_p",landaufun,fit_left,fit_right,4);
+	landaus_p->SetParNames("#sigma_{land}","#mu","A","#sigma_{gaus}");
 	double par_init_2_p[4]={0.1,0.,100, 0.1};
 	double par_llim_2_p[4]={0.0001,-20.,0.,0.0001};
 	double par_hlim_2_p[4]={30.,200.,100000.,30.};
-	fit_func(avg_p, langaus_p, 4, par_init_2_p, par_llim_2_p, par_hlim_2_p, c3, 2, form2);
+	fit_func(avg_p, landaus_p, 4, par_init_2_p, par_llim_2_p, par_hlim_2_p, c3, 2, form2);
 	
 	c3->Print((plot_name).c_str(),"pdf");
 	cout<<"Gaussian convoluted Landau fit completed..."<<endl;

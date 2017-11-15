@@ -90,9 +90,9 @@ int main(int argc, char **argv){
 	int n_tot=raw_tree->GetEntries();
 	cout<<"Read "<<n_tot<<" events from "<<dataFileName<<"_raw_data.root"<<endl;
 
-	TH1D* qval=new TH1D("qval","Distribution of tail Q/total Q; tail Q/total Q; counts", 100, 0., .7);
-	TH1D* qval_n=new TH1D("qval_n","Distribution of tail Q/total Q; tail Q/total Q; counts", 100, 0., .7);
-	TH1D* qval_p=new TH1D("qval_p","Distribution of tail Q/total Q; tail Q/total Q; counts", 100, 0., .7);
+	TH1D* qval=new TH1D("qval","Distribution of tail Q/total Q; tail Q/total Q; counts", 100, 0., 1);
+	TH1D* qval_n=new TH1D("qval_n","Distribution of tail Q/total Q; tail Q/total Q; counts", 100, 0., 1);
+	TH1D* qval_p=new TH1D("qval_p","Distribution of tail Q/total Q; tail Q/total Q; counts", 100, 0., 1);
 
 	int n_neutron=0;
 	int n_photon=0;

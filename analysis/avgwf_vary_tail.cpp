@@ -254,10 +254,21 @@ int main(int argc, char **argv){
 	TProfile* avg_n=hist_n->ProfileX();
 	TProfile* avg_p=hist_p->ProfileX();
 	
-	int numSteps = 150;
-	double minTailStart = 10,
-		   maxTailStart = 180,
-		   stepSize = (maxTailStart - minTailStart) / numSteps;
+	Int_t numSteps = 150,
+		  minTailStart = 10,
+		  maxTailStart = 180,
+		  minTailEnd = 170,
+		  maxTailEnd = 170;
+
+	TArrayI params(5);
+	params.AddAt(numSteps, 0);
+	params.AddAt(minTailStart, 1);
+	params.AddAt(maxTailStart, 2);
+	params.AddAt(minTailEnd, 3);
+	params.AddAt(maxTailEnd, 4);
+
+
+	double stepSize = (maxTailStart - minTailStart) / numSteps;
 		   
 	double tailStart,
 		   neutronQVal,
@@ -267,12 +278,16 @@ int main(int argc, char **argv){
 		   
 	TFile* variedTailFile = new TFile((dataFolderPath + dataFileName + "_varied_tail_qvals.root").c_str(), "RECREATE");
 	
-	TTree* qValTree = new TTree((dataFileName + "_varied_tail_qvals").c_str(), "Varied Tail Q-value Results");
+	TTree* qValTree = new TTree("data", "Varied Tail Q-value Results");
 	qValTree->Branch("tailStart", &tailStart);
 	qValTree->Branch("neutronQVal", &neutronQVal);
 	qValTree->Branch("photonQVal", &photonQVal);
 	qValTree->Branch("ratioQVal", &photonNeutronQValRatio);
 	qValTree->Branch("diffQVal", &photonNeutronQValDiff);
+
+	avg_n->Write();
+	avg_p->Write();
+	variedTailFile->WriteObjectAny(&params,"TArrayI","calculationParams");
 	
 	for(tailStart = minTailStart; tailStart <= maxTailStart; tailStart += stepSize){
 		calculateQVals(tailStart, avg_n, avg_p,
@@ -285,7 +300,7 @@ int main(int argc, char **argv){
 	
 	
 	TFile* readFile=new TFile((dataFolderPath + dataFileName+"_varied_tail_qvals.root").c_str(), "READ");
-	TTree* readTree=(TTree*)readFile->Get((dataFileName + "_varied_tail_qvals").c_str());
+	TTree* readTree=(TTree*)readFile->Get("data");
 
 	double tailStarts[numSteps], 
 		   neutronQVals[numSteps],

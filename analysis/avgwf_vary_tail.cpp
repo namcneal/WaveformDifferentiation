@@ -170,7 +170,8 @@ void fit_func(TProfile* plot, TF1* func, int n_par, double* par_init, double* pa
 }
 
 void calculateQVals(double tailStart, TProfile* avgNeutron, TProfile* avgPhoton,
-					double &neutronQVal, double &photonQVal, double &ratioQVal);
+					double &neutronQVal, double &photonQVal, 
+					double &ratioQVal, double &diffQVal);
 					  
 int main(int argc, char **argv){
 	cout << "Reading in the data and creating the trees" << endl;
@@ -261,7 +262,8 @@ int main(int argc, char **argv){
 	double tailStart,
 		   neutronQVal,
 		   photonQVal,
-		   photonNeutronQValRatio;
+		   photonNeutronQValRatio,
+		   photonNeutronQValDiff;
 		   
 	TFile* variedTailFile = new TFile((dataFolderPath + dataFileName + "_varied_tail_qvals.root").c_str(), "RECREATE");
 	
@@ -270,10 +272,12 @@ int main(int argc, char **argv){
 	qValTree->Branch("neutronQVal", &neutronQVal);
 	qValTree->Branch("photonQVal", &photonQVal);
 	qValTree->Branch("ratioQVal", &photonNeutronQValRatio);
+	qValTree->Branch("diffQVal", &photonNeutronQValDiff);
 	
 	for(tailStart = minTailStart; tailStart <= maxTailStart; tailStart += stepSize){
 		calculateQVals(tailStart, avg_n, avg_p,
-					   neutronQVal, photonQVal, photonNeutronQValRatio);
+					   neutronQVal, photonQVal, 
+					   photonNeutronQValRatio, photonNeutronQValDiff);
 		qValTree->Fill();
 	}
 	qValTree->Write();
@@ -283,46 +287,76 @@ int main(int argc, char **argv){
 	TFile* readFile=new TFile((dataFolderPath + dataFileName+"_varied_tail_qvals.root").c_str(), "READ");
 	TTree* readTree=(TTree*)readFile->Get((dataFileName + "_varied_tail_qvals").c_str());
 
-	double tempStart,
-		   tempRatio,
-		   tailStarts[numSteps], 
-		   photonNeutronQValRatios[numSteps];
-	readTree->SetBranchAddress("tailStart", &tempStart);
-	readTree->SetBranchAddress("ratioQVal", &tempRatio);
+	double tailStarts[numSteps], 
+		   neutronQVals[numSteps],
+		   photonQVals[numSteps],
+		   photonNeutronQValRatios[numSteps],
+		   photonNeutronQValDiffs[numSteps];
+	
 	
 	for(int i =0; i <= numSteps; i++){
+		readTree->SetBranchAddress("tailStart", tailStarts + i);
+		readTree->SetBranchAddress("neutronQVal", neutronQVals + i);
+		readTree->SetBranchAddress("photonQVal", photonQVals + i);
+		readTree->SetBranchAddress("ratioQVal", photonNeutronQValRatios + i);
+		readTree->SetBranchAddress("diffQVal", photonNeutronQValDiffs + i);
+		
 		readTree->GetEntry(i);
-		tailStarts[i] = tempStart;
-		photonNeutronQValRatios[i] = tempRatio;
 	}
 	
-	TCanvas* c0=new TCanvas("0", "", 1500, 750);
+	TCanvas* c0=new TCanvas("0", "", 600, 500);
+	c0->Divide(1,2);
 	
-	TGraph* ratioPlot = new TGraph(numSteps, tailStarts, photonNeutronQValRatios);
-	ratioPlot->GetXaxis()->SetLimits(0, 200);
-	ratioPlot->SetMinimum(-.1);
-	ratioPlot->SetMaximum(1.1);
-	ratioPlot->SetMarkerStyle(8);
-	ratioPlot->SetMarkerColor(8);
-	ratioPlot->Draw("AP");
+	c0->cd(1);
+	TGraph* neutronPlot = new TGraph(numSteps, tailStarts, neutronQVals);
+	neutronPlot->SetTitle("Photon (Blue) & Neutron (Red) Individual Q-values and Difference");
+	neutronPlot->GetXaxis()->SetLimits(0, 200);
+	neutronPlot->SetMinimum(0);
+	neutronPlot->SetMaximum(.6);
+	neutronPlot->SetMarkerStyle(24);
+	neutronPlot->SetMarkerSize(.5);
+	neutronPlot->SetMarkerColor(2);
+	neutronPlot->SetLineColor(2);
+	neutronPlot->Draw("Al");
 	
+	TGraph* photonPlot = new TGraph(numSteps, tailStarts, photonQVals);
+	photonPlot->SetMarkerStyle(24);
+	photonPlot->SetMarkerColor(4);
+	photonPlot->SetMarkerSize(.5);
+	photonPlot->SetLineColor(4);
+	photonPlot->Draw("l");
+	
+	TGraph* ratioPlot = new TGraph(numSteps, tailStarts, photonNeutronQValDiffs);
+	ratioPlot->SetMarkerStyle(24);
+	ratioPlot->SetMarkerColor(3);
+	ratioPlot->SetMarkerSize(.5);
+	ratioPlot->SetLineColor(3);
+	ratioPlot->Draw("l");
+	
+	TLine* line_top =new TLine(20,0,20,1.1);
+	line_top->SetLineColor(kBlack);
+	line_top->Draw("SAME");
+		
+	c0->cd(2);
 	avg_n->SetLineColor(kRed);
 	avg_p->SetLineColor(kBlue);
 	avg_n->SetLineWidth(3);
 	avg_p->SetLineWidth(3);
 	avg_n->SetStats(false);
 	avg_p->SetStats(false);
-	avg_n->Draw("A HIST SAME C");
+	avg_n->GetXaxis()->SetLimits(0, 200);
+	avg_p->GetXaxis()->SetLimits(0, 200);
+	avg_n->Draw("HIST C");
 	avg_p->Draw("A HIST SAME C");
 	
-	TLine* line=new TLine(20,-.1,20,1.1);
-	line->SetLineColor(kBlack);
-	line->Draw("SAME");
+	TLine* line_bottom =new TLine(20,0,20,1.1);
+	line_bottom->SetLineColor(kBlack);
+	line_bottom->Draw("SAME");
 	
 	
 	c0->Modified();
 	c0->Update();
-	c0->SaveAs((dataFolderPath + dataFileName + "_varied_qvals.png").c_str(), "png");
+	c0->SaveAs((dataFolderPath + dataFileName + "_varied_qvals_DIFFERENCE.png").c_str(), "png");
 	
 	par_file->Close();
 	raw_file->Close();
@@ -330,7 +364,7 @@ int main(int argc, char **argv){
 }
 
 void calculateQVals(double tailStart, TProfile* avgNeutron, TProfile* avgPhoton,
-					double &neutronQVal, double &photonQVal, double &ratioQVal){
+					double &neutronQVal, double &photonQVal, double &ratioQVal, double &diffQVal){
 						  
 	int tail_start_bin=avgNeutron->FindBin(tailStart);
 	double a_main_n=0.,
@@ -352,5 +386,6 @@ void calculateQVals(double tailStart, TProfile* avgNeutron, TProfile* avgPhoton,
 	neutronQVal = neutronCurrentQVal;
 	photonQVal  = photonCurrentQVal;
 	ratioQVal   = photonCurrentQVal / neutronCurrentQVal;
-						  
+	diffQVal = abs(photonCurrentQVal - neutronCurrentQVal);
+							  
 }

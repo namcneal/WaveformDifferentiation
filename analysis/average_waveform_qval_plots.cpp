@@ -64,8 +64,6 @@ int main(int argc, char **argv){
 	readFile->GetObject("calculationParams", calculationParams);
 
 
-
-
 	// double tailStarts[numSteps], 
 	// 	   neutronQVals[numSteps],
 	// 	   photonQVals[numSteps],

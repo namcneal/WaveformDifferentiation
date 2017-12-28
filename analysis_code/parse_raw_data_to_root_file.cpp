@@ -31,7 +31,7 @@ int main(int argc, char **argv){
 	
 	string root_name = filePathPrefix + fileName + "_raw_data.root";
 	FILE* in;
-	in = fopen((filePathPrefix + fileName+".dat").c_str(), "r");
+	in = fopen((filePathPrefix + fileName + ".dat").c_str(), "r");
 	
 	TFile *file = new TFile (root_name.c_str(), "recreate");
 	

@@ -1,58 +1,10 @@
-# include <cstdio>
-# include <cmath>
-# include <cstdlib>
-# include <iostream>
-# include <iomanip>
-# include <fstream>
-# include <sstream>
-# include <string>
-# include <cassert>
-# include <vector>
-# include <algorithm>
-
-# include "TCanvas.h"
-# include "TROOT.h"
-# include "TGraphErrors.h"
-# include "TH1.h"
-# include "TH2.h"
-# include "TH1F.h"
-# include "TF1.h"
-# include "TLegend.h"
-# include "TLatex.h"
-# include "TStyle.h"
-# include "TApplication.h"
-# include "TMultiGraph.h"
-# include "TMath.h"
-# include "TTree.h"
-# include "TFile.h"
-# include "TLine.h"
-# include "TNtuple.h"
-# include "TProfile.h"
-# include "TPaveText.h"
-# include "TColor.h"
+#include "generate_avg_waveform.h"
 
 using namespace std;
-const double PERTDC=2.;
-const int N_width=15;
-const double photon_low=-20.;
-const double neutron_low=30.;
-const double photon_high=20.;
-const double neutron_high=150.;
-const double fit_left=-20.;
-const double fit_right_long=200.;
-const double fit_right=75.;
-
-void generateAverageWaveforms(string dataFileName, int SnumBins);
-
-
-void calculateQVals(double tailStart, double tailEnd,
-					TProfile* avgNeutron, TProfile* avgPhoton,
-					double &neutronQVal, double &photonQVal, 
-					double &ratioQVal, double &diffQVal);
 					  
 int main(int argc, char **argv){
-	string dataFileName = argv[1],
-		   dataFolderPath = "../data/";
+	string dataFileName = argv[2],
+		   dataFolderPath = argv[1];
 
 	int numBins = 1000;
 	generateAverageWaveforms(dataFileName, numBins);
@@ -60,11 +12,9 @@ int main(int argc, char **argv){
 	return 0;
 }
 
-void generateAverageWaveforms(string dataFileName, int numBins){
+void generateAverageWaveforms(string dataFolderPath, string dataFileName, int numBins){
 	cout << "Reading in the data and creating the trees" << endl;
-	
-	string dataFolderPath = "../data/";
-		   
+			   
 	string plot_name = dataFolderPath + dataFileName + "PLEASE.pdf";
 	
 	TFile* par_file=new TFile((dataFolderPath + dataFileName + "_coarse_time.root").c_str(), "UPDATE");

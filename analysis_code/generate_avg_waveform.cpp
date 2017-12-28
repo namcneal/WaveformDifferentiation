@@ -1,13 +1,17 @@
 #include "generate_avg_waveform.h"
-
 using namespace std;
+					  
+/* Takes the raw data and normalization parameter ROOT files.
+ * Iterates through each event and adds each waveform to one of two 2-D histograms, the neutron or the gamma.
+ * Gets the average neutron and average gamma waveforms from the X-profiles of the 2-D histograms. 
+ */
 					  
 int main(int argc, char **argv){
 	string dataFileName = argv[2],
 		   dataFolderPath = argv[1];
 
 	int numBins = 1000;
-	generateAverageWaveforms(dataFileName, numBins);
+	generateAverageWaveforms(dataFolderPath, dataFileName, numBins);
 
 	return 0;
 }
@@ -17,8 +21,8 @@ void generateAverageWaveforms(string dataFolderPath, string dataFileName, int nu
 			   
 	string plot_name = dataFolderPath + dataFileName + "PLEASE.pdf";
 	
-	TFile* par_file=new TFile((dataFolderPath + dataFileName + "_coarse_time.root").c_str(), "UPDATE");
-	TTree* par_tree=(TTree*)par_file->Get((dataFileName + "_coarse_time").c_str());
+	TFile* norm_params_file=new TFile((dataFolderPath + dataFileName + "_normalization_params.root").c_str(), "READ");
+	TTree* norm_params_tree=(TTree*)norm_params_file->Get((dataFileName + "_normalization_params").c_str());
 	
 	TFile* raw_file=new TFile((dataFolderPath + dataFileName+"_raw_data.root").c_str(), "READ");
 	TTree* raw_tree=(TTree*)raw_file->Get((dataFileName + "_raw").c_str());
@@ -29,14 +33,14 @@ void generateAverageWaveforms(string dataFolderPath, string dataFileName, int nu
 	int adc_f[N_width*32];
 	
 	cout << "Setting branch addresses to read into." << endl;
-	par_tree->SetBranchAddress("ped_n", &ped_n);
-	par_tree->SetBranchAddress("ped_f", &ped_f);
-	par_tree->SetBranchAddress("amp_n", &amp_n);
-	par_tree->SetBranchAddress("amp_f", &amp_f);
-	par_tree->SetBranchAddress("t_max_n", &t_max_n);
-	par_tree->SetBranchAddress("t_max_f", &t_max_f);
-	par_tree->SetBranchAddress("t_50_n", &t_50_n);
-	par_tree->SetBranchAddress("t_50_f", &t_50_f);
+	norm_params_tree->SetBranchAddress("ped_n", &ped_n);
+	norm_params_tree->SetBranchAddress("ped_f", &ped_f);
+	norm_params_tree->SetBranchAddress("amp_n", &amp_n);
+	norm_params_tree->SetBranchAddress("amp_f", &amp_f);
+	norm_params_tree->SetBranchAddress("t_max_n", &t_max_n);
+	norm_params_tree->SetBranchAddress("t_max_f", &t_max_f);
+	norm_params_tree->SetBranchAddress("t_50_n", &t_50_n);
+	norm_params_tree->SetBranchAddress("t_50_f", &t_50_f);
 	
 	raw_tree->SetBranchAddress("adc_n", adc_n);
 	raw_tree->SetBranchAddress("adc_f", adc_f);
@@ -53,7 +57,7 @@ void generateAverageWaveforms(string dataFolderPath, string dataFileName, int nu
 	int n_photon=0;
 	
 	for (int i=0; i<n_tot; i++){
-		par_tree->GetEntry(i);
+		norm_params_tree->GetEntry(i);
 		raw_tree->GetEntry(i);
 		
 		if (is_good_f==1 && is_good_n==1 && t_max_f!=0. && t_max_n!=0.){
@@ -86,6 +90,6 @@ void generateAverageWaveforms(string dataFolderPath, string dataFileName, int nu
 	hist_p->ProfileX()->Write();
 	waveformFile->Close();
 	
-	par_file->Close();
+	norm_params_file->Close();
 	raw_file->Close();
 }

@@ -1,52 +1,13 @@
-# include <cstdio>
-# include <cmath>
-# include <cstdlib>
-# include <iostream>
-# include <iomanip>
-# include <fstream>
-# include <sstream>
-# include <string>
-# include <cassert>
-# include <vector>
-# include <algorithm>
-
-# include "TCanvas.h"
-# include "TROOT.h"
-# include "TGraphErrors.h"
-# include "TH1.h"
-# include "TH1F.h"
-# include "TF1.h"
-# include "TLegend.h"
-# include "TLatex.h"
-# include "TStyle.h"
-# include "TApplication.h"
-# include "TMultiGraph.h"
-# include "TMath.h"
-# include "TTree.h"
-# include "TFile.h"
-# include "TLine.h"
-# include "TNtuple.h"
-
+#include "parser.h"
 using namespace std;
-int header_len=12;
 
-///////////////////////////////////////////////////////
-//
-//Use as parser <filename(-".dat")> <N_width> <N_spill> <channel_1> "n/f" <channel_2> "n/f"
-//     requires channel_1 < channel_2
-//
-///////////////////////////////////////////////////////
-
-int quality_check(int* adc, int sampling_len){//return 1, good data; return 0, empty channel
-    int flag = 0;
-    
-	for (int i=0; i<sampling_len; i++){
-		if (adc[i]>400) {flag=1; break;}
-	}
-	
-	return flag;
-}
-
+/* Takes a raw .dat data file and tranfers the contents into a .root file of the same name.
+ * 
+ * Use as parser <filename(-".dat")> <N_width> <N_spill> <channel_1> "n/f" <channel_2> "n/f"
+ * Requires channel_1 < channel_2
+ * 
+ * The N_width, N_spill, and other arguments are file specific and depend on the run. 
+*/
 int main(int argc, char **argv){
 	gStyle->SetOptStat(0);
 	gErrorIgnoreLevel = kWarning;
@@ -62,15 +23,15 @@ int main(int argc, char **argv){
 	char* label1=argv[6];
 	int chan2=atoi(argv[7]);
 	char* label2=argv[8];
-	int n_event=2048*16/(sampling_len*4+header_len);
-	int n_skip=2048*16-n_event*(sampling_len*4+header_len);
+	int n_event=2048*16/(sampling_len*4+HEADER_LEN);
+	int n_skip=2048*16-n_event*(sampling_len*4+HEADER_LEN);
 	int index=0;
 	int junk, buffer;
 	char junk_string[20];
 	
 	string root_name = filePathPrefix + fileName + "_raw_data.root";
 	FILE* in;
-	in=fopen((filePathPrefix + fileName+".dat").c_str(), "r");
+	in = fopen((filePathPrefix + fileName+".dat").c_str(), "r");
 	
 	TFile *file = new TFile (root_name.c_str(), "recreate");
 	
@@ -97,7 +58,7 @@ int main(int argc, char **argv){
 	
 	for (int i=0; i<n_spill; i++){
 		for (int j=0; j<n_event; j++){
-			for (int k=0; k<header_len; k++) {fscanf(in, "%x", &junk);}
+			for (int k=0; k<HEADER_LEN; k++) {fscanf(in, "%x", &junk);}
 			for (int k=0; k<sampling_len; k++){
 				for (int l=0; l<chan1; l++){fscanf(in, "%x", &junk);}
 				if ((strcmp(label1,"n")==0)&&(strcmp(label2,"f")==0)){
@@ -120,9 +81,9 @@ int main(int argc, char **argv){
 				for (int l=0; l<(3-chan2); l++){fscanf(in, "%x", &junk);}
 			}
 			if (j!=0) {//get rid off the mis-triggered first event in each spill
-				n_quality = quality_check(adc_n, sampling_len);
+				n_quality = (int) quality_check(adc_n, sampling_len);
 				if (n_quality == 1) n_good++;
-				f_quality = quality_check(adc_f, sampling_len);
+				f_quality = (int) quality_check(adc_f, sampling_len);
 				if (f_quality == 1) f_good++;
 				tree->Fill();
 				index++;
@@ -140,4 +101,14 @@ int main(int argc, char **argv){
 
 	file->Close();
 	return 0;
+}
+
+bool quality_check(int* adc, int sampling_len){//return 1, good data; return 0, empty channel
+    bool flag = false;
+    
+	for (int i=0; i<sampling_len; i++){
+		if (adc[i]>400) {flag = true; break;}
+	}
+	
+	return flag;
 }

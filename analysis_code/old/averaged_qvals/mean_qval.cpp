@@ -51,60 +51,45 @@ Requires the tail start parameter and a reference to an array of three doubles.
 Modifies the array of three doubles. The first entry is the ratios of all 
 particles. The second is the neutron ratio an the third is the photon. 
 */
-void mean_qval(string inputFileName, int tailStart, double* ratioArray,
-			   TH1D* bothHist, TH1D* neutroguillermnHist, TH1D* photonHist);
+void mean_qval(string dataFileName, int tailStart, double* ratioArray,
+			   TH1D* bothHist, TH1D* neutronHist, TH1D* photonHist);
 
 int main(int argc, char **argv){	
 	
-	string inputFileName = argv[1];
+	string dataFileName = argv[1];
 
-//	TCanvas * canvas = new TCanvas("Tail vs Total Integration", "Both Particles' Tail/Total");
-//	TCanvas * neutronCanvas = new TCanvas("Tail vs Total Integration", "Neutron Tail/Total");
-//	TCanvas * photonCanvas = new TCanvas("Tail vs Total Integration", "Photon Tail/Total");
+	double mean_array[3] = {0,0,0};
+
+	TCanvas * canvas = new TCanvas("Tail vs Total Integration", "Both Particles' Tail/Total");
 	
-	string outputFileName = "variedTailQVals.root";
-	
-	double qValBoth = 0,
-		   qValNeutron = 0,
-		   qValPhoton = 0;
 	TH1D * bothHist = new TH1D("a_h", "All Particles' Total/Tail", 100, 0.0, 1.5);
 	TH1D * neutronHist = new TH1D("n_h", "Neutron Total/Tail", 100, 0.0, 1.5);
 	TH1D * photonHist = new TH1D("p_h", "Photon Total/Tail", 100, 0.0, 1.5);
-	
-	TFile f("../data/variedTail.root", "RECREATE");;
-	TTree * histograms = new TTree("Q_vals", "All the histograms.");
-	
-	histograms->Branch("qValBoth", &qValBoth);
-	histograms->Branch("qValNeutron", &qValNeutron);
-	histograms->Branch("qValPhoton", &qValPhoton);
-	histograms->Branch("bothHist", bothHist);
-	histograms->Branch("neutronHist", neutronHist);
-	histograms->Branch("photonHist", photonHist);
-	
-	double mean_array[3] = {0,0,0};
 
 	mean_qval(argv[1], 20, mean_array,
 			  bothHist, neutronHist, photonHist);
-	histograms->Fill();
-	f.Write();
-	f.Close();
-
+			  
+	neutronHist->Draw();
+	
+	string plotName = DATA_FOLDER_PATH  + dataFileName + "_qval.pdf";
+	canvas->Print((plotName+"[").c_str(),"pdf");
+	
 }
 
-void mean_qval(string inputFileName, int tailStart, double* ratioArray,
+void mean_qval(string dataFileName, int tailStart,
 			   TH1D* bothHist, TH1D* neutronHist, TH1D* photonHist){
 	string dataFolderPrefix = "../data/";
 	
-	TFile* par_file = new TFile((dataFolderPrefix + inputFileName + "_coarse_time.root").c_str(), "UPDATE");
-	TTree* par_tree =( TTree*)par_file->Get((inputFileName + "_coarse_time").c_str());
+	TFile* par_file = new TFile((dataFolderPrefix + dataFileName + "_coarse_time.root").c_str(), "UPDATE");
+	TTree* par_tree =( TTree*)par_file->Get((dataFileName + "_coarse_time").c_str());
 	if (!par_tree){
-		cout << "Could not find the " <<  inputFileName << "_coarse_time.root file" << endl;
+		cout << "Could not find the " <<  dataFileName << "_coarse_time.root file" << endl;
 	}
 	
-	TFile* raw_file = new TFile((dataFolderPrefix + inputFileName + "_raw_data.root").c_str(), "READ");
-	TTree* raw_tree = (TTree*)raw_file->Get(Form("%s_raw", inputFileName.c_str()));
+	TFile* raw_file = new TFile((dataFolderPrefix + dataFileName + "_raw_data.root").c_str(), "READ");
+	TTree* raw_tree = (TTree*)raw_file->Get(Form("%s_raw", dataFileName.c_str()));
 	if (!raw_tree){
-			cout << "Could not find the " <<  inputFileName << "_raw_time.root file" << endl;
+			cout << "Could not find the " <<  dataFileName << "raw_time.root file" << endl;
 		}
 
 	
@@ -134,7 +119,7 @@ void mean_qval(string inputFileName, int tailStart, double* ratioArray,
 
 	cout << "Getting entries.";
 	int n_tot=raw_tree->GetEntries();
-	cout<<"Read "<<n_tot<<" events from "<<inputFileName<<"_raw_data.root"<<endl;
+	cout<<"Read "<<n_tot<<" events from "<<dataFileName<<"_raw_data.root"<<endl;
 
 	TH1D* qval=new TH1D("qval","Distribution of tail Q/total Q; tail Q/total Q; counts", 100, 0., 2);
 	TH1D* qval_n=new TH1D("qval_n","Distribution of tail Q/total Q; tail Q/total Q; counts", 100, 0., 2);
@@ -148,32 +133,35 @@ void mean_qval(string inputFileName, int tailStart, double* ratioArray,
 		par_tree->GetEntry(i);
 		raw_tree->GetEntry(i);
 
-		if (is_good_f==1 && is_good_n==1 && t_max_f!=0. && t_max_n!=0.){
-			double t_50_diff=t_50_f-t_50_n;
-			double start_time=t_50_f-20.;
-			int start_TDC=(int)ceil(start_time);
-			if (start_TDC%2) start_TDC+=1;
+		if (is_good_f  && is_good_n && t_max_f!=0. && t_max_n!=0.){
+			double start_time = t_50_f - 20.;
+			
+			int start_TDC = (int)ceil(start_time);
+			if (start_TDC%2){
+				start_TDC += 1;
+			}
 			start_TDC/=2;
 
-			int tail_TDC=start_TDC+20;
-			cout << tail_TDC << endl;
-			int end_TDC=start_TDC+110;
+			int tail_TDC = start_TDC+20;
+			int end_TDC = start_TDC+110;
 
-			double a_all=0.;
-			double a_tail=0.;
+			double total_area = 0.;
+			double tail_area = 0.;
 
 			for (int j = start_TDC; j <tail_TDC; j++){
-				a_all += adc_f[j]-ped_f;
+				total_area += adc_f[j]-ped_f;
 			}
 
 			// The integration of the waveforms.
 			for (int j=tail_TDC; j<end_TDC; j++){
-				a_all+=(double)adc_f[j]-ped_f;
-				a_tail+=(double)adc_f[j]-ped_f;
+				total_area += (double)adc_f[j]-ped_f;
+				tail_area  += (double)adc_f[j]-ped_f;
 			}
-			double ratio=a_tail/a_all;
+			
+			double ratio=tail_area/total_area;
 			qval->Fill(ratio);
-
+			
+			double t_50_diff = t_50_f - t_50_n;
 			if (t_50_diff>neutron_low && t_50_diff<neutron_high){
 				qval_n->Fill(ratio);
 				n_neutron++;
@@ -187,11 +175,7 @@ void mean_qval(string inputFileName, int tailStart, double* ratioArray,
 	}
 	cout<<"    "<<n_neutron<<" neutron events are present."<<endl;
 	cout<<"    "<<n_photon<<" photon events are present."<<endl;
-
-	ratioArray[0] = qval->GetMean();
-	ratioArray[1] = qval_n->GetMean();
-	ratioArray[2] = qval_p->GetMean();
-
+	
 	bothHist = qval;
 	neutronHist = qval_n;
 	photonHist = qval_p;

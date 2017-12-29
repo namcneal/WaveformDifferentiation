@@ -44,16 +44,17 @@ int main(int argc, char **argv){
 		adc_n[i]=0;
 		adc_f[i]=0;
 	}
-	int n_quality=0,
-	    f_quality=0;
 	
-	int n_good=0;
-	int f_good=0;
+	bool near_quality = 0,
+	     far_quality = 0;
+	
+	int num_near_good = 0,
+		num_far_good = 0;
 	
 	tree->Branch("adc_n", adc_n, Form("adc_n[%i]/I", sampling_len));
 	tree->Branch("adc_f", adc_f, Form("adc_f[%i]/I", sampling_len));
-	tree->Branch("n_quality", &n_quality, "n_quality/I");
-	tree->Branch("f_quality", &f_quality, "f_quality/I");
+	tree->Branch("near_quality", &near_quality, "near_quality/O");
+	tree->Branch("far_quality", &far_quality, "far_quality/O");
 	
 	
 	for (int i=0; i<n_spill; i++){
@@ -81,10 +82,12 @@ int main(int argc, char **argv){
 				for (int l=0; l<(3-chan2); l++){fscanf(in, "%x", &junk);}
 			}
 			if (j!=0) {//get rid off the mis-triggered first event in each spill
-				n_quality = (int) quality_check(adc_n, sampling_len);
-				if (n_quality == 1) n_good++;
-				f_quality = (int) quality_check(adc_f, sampling_len);
-				if (f_quality == 1) f_good++;
+				near_quality = quality_check(adc_n, sampling_len);
+				if (near_quality == 1) num_near_good++;
+				
+				far_quality = quality_check(adc_f, sampling_len);
+				if (far_quality == 1) num_far_good++;
+				
 				tree->Fill();
 				index++;
 				}
@@ -94,8 +97,8 @@ int main(int argc, char **argv){
 		for (int l=0; l<7; l++){fscanf(in, "%s", junk_string);}
 	}
 	cout<<index<<" events are parsed out of "<< n_spill<<" spills."<<endl;
-	cout<<"    "<<n_good<<" events have signal in the near channel."<<endl;
-	cout<<"    "<<f_good<<" events have signal in the far channel."<<endl;
+	cout<<"    "<< num_near_good << " events have signal in the near channel."<<endl;
+	cout<<"    "<< num_far_good  << " events have signal in the far channel."<<endl;
 	tree->Write();
 	fclose(in);
 

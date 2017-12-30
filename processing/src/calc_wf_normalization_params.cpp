@@ -1,5 +1,5 @@
 
-#include "calc_wf_normalization_params.h"
+#include "../include/calc_wf_normalization_params.h"
 using namespace std;
 
 /* Takes a raw ROOT data file and calculates the parameters used to normalize the waveforms. 
@@ -15,7 +15,7 @@ int main(int argc, char **argv){
 	string filePathPrefix = argv[1],
 		   fileName = argv[2];
 	
-	string new_file_name = filePathPrefix + fileName + "_normalization_params.root",
+	string new_file_name = filePathPrefix + '/' + fileName + "_normalization_params.root",
 		   new_data_tree_name = fileName + "_normalization_params";
 	TFile* new_file=new TFile(new_file_name.c_str(), "recreate");
 	TTree* new_tree=new TTree(new_data_tree_name.c_str(),(fileName+"_normalization_params").c_str());
@@ -24,7 +24,7 @@ int main(int argc, char **argv){
 		cout << "Could not creat the new " << fileName << "_course_time tree." << endl;
 	}
 	
-	string raw_file_name = filePathPrefix + fileName + "_raw_data.root",
+	string raw_file_name = filePathPrefix + '/' fileName + "_raw_data.root",
 		   raw_data_tree_name = fileName + "_raw";
 	TFile* raw_file=new TFile(raw_file_name.c_str(), "READ");
 	TTree* raw_tree = (TTree*)raw_file->Get(raw_data_tree_name.c_str());
@@ -33,39 +33,39 @@ int main(int argc, char **argv){
 		cout << "\n\nCannot find raw data tree" << endl << endl;
 	}
 	
-	double ped_n = 0, 
-		   ped_f = 0, 
-		   amp_n = 0, 
-		   amp_f = 0, 
-		   t_max_n = 0, 
-		   t_max_f = 0, 
-		   t_50_n = 0, 
-		   t_50_f = 0;
+	double ped_near = 0, 
+		   ped_far = 0, 
+		   amp_near = 0, 
+		   amp_far = 0, 
+		   t_max_near = 0, 
+		   t_max_far = 0, 
+		   t_50_near = 0, 
+		   t_50_far = 0;
 	
-	int is_good_n = 0, 
-		is_good_f = 0;
+	int is_good_near = 0, 
+		is_good_far = 0;
 		
-	int adc_n[N_width*32] = {0},
-		adc_f[N_width*32] = {0};
+	int adc_near[N_width*32] = {0},
+		adc_far[N_width*32] = {0};
 	
 	cout << endl << "Setting branch addresses for the new tree." << endl;
-	new_tree->Branch("ped_n", &ped_n, "ped_n/D");
-	new_tree->Branch("ped_f", &ped_f, "ped_f/D");
-	new_tree->Branch("amp_n", &amp_n, "amp_n/D");
-	new_tree->Branch("amp_f", &amp_f, "amp_f/D");
-	new_tree->Branch("t_max_n", &t_max_n, "t_max_n/D");
-	new_tree->Branch("t_max_f", &t_max_f, "t_max_f/D");
-	new_tree->Branch("t_50_n", &t_50_n, "t_50_n/D");
-	new_tree->Branch("t_50_f", &t_50_f, "t_50_f/D");
+	new_tree->Branch("ped_near", &ped_near, "ped_near/D");
+	new_tree->Branch("ped_far", &ped_far, "ped_far/D");
+	new_tree->Branch("amp_near", &amp_near, "amp_near/D");
+	new_tree->Branch("amp_far", &amp_far, "amp_far/D");
+	new_tree->Branch("t_max_near", &t_max_near, "t_max_near/D");
+	new_tree->Branch("t_max_far", &t_max_far, "t_max_far/D");
+	new_tree->Branch("t_50_near", &t_50_near, "t_50_near/D");
+	new_tree->Branch("t_50_far", &t_50_far, "t_50_far/D");
 	
 	cout << "Setting branch addresses for the raw tree" << "...adc n";
-	raw_tree->SetBranchAddress("adc_n", adc_n);
+	raw_tree->SetBranchAddress("adc_near", adc_near);
 	cout << "...adc f";
-	raw_tree->SetBranchAddress("adc_f", adc_f);
+	raw_tree->SetBranchAddress("adc_far", adc_far);
 	cout << "...n quality";
-	raw_tree->SetBranchAddress("n_quality", &is_good_n);
+	raw_tree->SetBranchAddress("near_quality", &is_good_near);
 	cout << "...f quality." << endl;
-	raw_tree->SetBranchAddress("f_quality", &is_good_f);
+	raw_tree->SetBranchAddress("far_quality", &is_good_far);
 	
 	cout << "Geting the total number of entries." << endl;
 	int n_tot = raw_tree->GetEntries();
@@ -85,18 +85,18 @@ int main(int argc, char **argv){
 		raw_tree->GetEntry(i);
 		
 		cout << "Running the normalization function and filling new tree." << endl;
-		int flag_n=channel_norm_fit(adc_n, &ped_n, &amp_n, &t_max_n, &t_50_n);
-		int flag_f=channel_norm_fit(adc_f, &ped_f, &amp_f, &t_max_f, &t_50_f);
-		cout << flag_n << " " << flag_f<<endl;
+		int flag_near=channel_norm_fit(adc_near, &ped_near, &amp_near, &t_max_near, &t_50_near);
+		int flag_far=channel_norm_fit(adc_far, &ped_far, &amp_far, &t_max_far, &t_50_far);
+		cout << flag_near << " " << flag_far<<endl;
 		new_tree->Fill();
 		
 		cout << "Determining good and bad data" << endl;
-		if (is_good_n==0||is_good_f==0) n_bad_data++;
+		if (is_good_near==0||is_good_far==0) n_bad_data++;
 		else{
-			if (flag_n==0&&flag_f==0){
+			if (flag_near==0&&flag_far==0){
 				n_fit++;
-				h_t_diff_50->Fill(t_50_f-t_50_n);
-				h_t_diff_max->Fill(t_max_f-t_max_n);
+				h_t_diff_50->Fill(t_50_far-t_50_near);
+				h_t_diff_max->Fill(t_max_far-t_max_near);
 			}
 			else n_bad_fit++;
 		}

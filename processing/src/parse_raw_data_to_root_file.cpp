@@ -1,10 +1,12 @@
-#include "parser.h"
+#include "../include/parse_raw_data_to_root_file.h"
 using namespace std;
 
 /* Takes a raw .dat data file and tranfers the contents into a .root file of the same name.
  * 
  * Use as parser <filename(-".dat")> <N_width> <N_spill> <channel_1> "n/f" <channel_2> "n/f"
  * Requires channel_1 < channel_2
+ * 
+ * Example for additional arguments after data file name: 15 200 0 n 3 f 
  * 
  * The N_width, N_spill, and other arguments are file specific and depend on the run. 
 */
@@ -14,7 +16,6 @@ int main(int argc, char **argv){
 	
 	string filePathPrefix = argv[1],
 		   fileName 	  = argv[2];
-	
 	
 	int n_width=atoi(argv[3]);
 	int sampling_len=n_width*32;
@@ -29,20 +30,25 @@ int main(int argc, char **argv){
 	int junk, buffer;
 	char junk_string[20];
 	
-	string root_name = filePathPrefix + fileName + "_raw_data.root";
+	string file_name = filePathPrefix + '/' + fileName + ".dat";
+	cout << file_name << endl << endl;
+	
 	FILE* in;
-	in = fopen((filePathPrefix + fileName + ".dat").c_str(), "r");
+	in = fopen(file_name.c_str(), "r");
+	if(!in){
+		cout << endl << "Could not open data (.dat) file" << endl;
+	}
 	
+	string root_name = filePathPrefix + '/' + fileName + "_raw_data.root";
 	TFile *file = new TFile (root_name.c_str(), "recreate");
-	
 	string tree_name = fileName + "_raw";
 	TTree *tree =  new TTree (tree_name.c_str(), tree_name.c_str());
 	
-	int adc_n[sampling_len];
-	int adc_f[sampling_len];
+	int adc_near[sampling_len];
+	int adc_far[sampling_len];
 	for (int i=0; i<sampling_len; i++){
-		adc_n[i]=0;
-		adc_f[i]=0;
+		adc_near[i]=0;
+		adc_far[i]=0;
 	}
 	
 	bool near_quality = 0,
@@ -51,8 +57,8 @@ int main(int argc, char **argv){
 	int num_near_good = 0,
 		num_far_good = 0;
 	
-	tree->Branch("adc_n", adc_n, Form("adc_n[%i]/I", sampling_len));
-	tree->Branch("adc_f", adc_f, Form("adc_f[%i]/I", sampling_len));
+	tree->Branch("adc_near", adc_near, Form("adc_near[%i]/I", sampling_len));
+	tree->Branch("adc_far", adc_far, Form("adc_far[%i]/I", sampling_len));
 	tree->Branch("near_quality", &near_quality, "near_quality/O");
 	tree->Branch("far_quality", &far_quality, "far_quality/O");
 	
@@ -64,28 +70,28 @@ int main(int argc, char **argv){
 				for (int l=0; l<chan1; l++){fscanf(in, "%x", &junk);}
 				if ((strcmp(label1,"n")==0)&&(strcmp(label2,"f")==0)){
 					fscanf(in, "%x", &buffer);
-					adc_n[k]=(buffer-32768);
+					adc_near[k]=(buffer-32768);
 				}
 				if ((strcmp(label1,"f")==0)&&(strcmp(label2,"n")==0)){
 					fscanf(in, "%x", &buffer);
-					adc_f[k]=(buffer-32768);
+					adc_far[k]=(buffer-32768);
 				}
 				for (int l=0; l<(chan2-chan1-1); l++){fscanf(in, "%x", &junk);}
 				if ((strcmp(label1,"n")==0)&&(strcmp(label2,"f")==0)){
 					fscanf(in, "%x", &buffer);
-					adc_f[k]=(buffer-32768);
+					adc_far[k]=(buffer-32768);
 				}
 				if ((strcmp(label1,"f")==0)&&(strcmp(label2,"n")==0)){
 					fscanf(in, "%x", &buffer);
-					adc_n[k]=(buffer-32768);
+					adc_near[k]=(buffer-32768);
 				}
 				for (int l=0; l<(3-chan2); l++){fscanf(in, "%x", &junk);}
 			}
 			if (j!=0) {//get rid off the mis-triggered first event in each spill
-				near_quality = quality_check(adc_n, sampling_len);
+				near_quality = quality_check(adc_near, sampling_len);
 				if (near_quality == 1) num_near_good++;
 				
-				far_quality = quality_check(adc_f, sampling_len);
+				far_quality = quality_check(adc_far, sampling_len);
 				if (far_quality == 1) num_far_good++;
 				
 				tree->Fill();
@@ -110,7 +116,9 @@ bool quality_check(int* adc, int sampling_len){//return 1, good data; return 0, 
     bool flag = false;
     
 	for (int i=0; i<sampling_len; i++){
-		if (adc[i]>400) {flag = true; break;}
+		if (adc[i]>400) {
+			flag = true; 
+			break;}
 	}
 	
 	return flag;

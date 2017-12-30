@@ -14,6 +14,7 @@
 # include "TROOT.h"
 # include "TGraphErrors.h"
 # include "TH1.h"
+# include "TH2.h"
 # include "TH1F.h"
 # include "TF1.h"
 # include "TLegend.h"
@@ -27,11 +28,14 @@
 # include "TLine.h"
 # include "TNtuple.h"
 
-const int HEADER_LEN = 12;
+const double PERTDC=2.;
+const int N_width=15;
+const double photon_low=-20.;
+const double neutron_low=30.;
+const double photon_high=20.;
+const double neutron_high=150.;
 
-
-/* Used to check the ADC data for empty channels.
- * Returns true if the data is good and
- * 		   false for empty channels
-*/
-bool quality_check(int* adc, int sampling_len);
+void align_waveform(int raw_adc_far[],
+					int t_50_near, int t_50_far, int pedestal_far,
+					int aligned_adc_far[], bool &isNeutron,
+					int &num_neutrons, int &num_photons);

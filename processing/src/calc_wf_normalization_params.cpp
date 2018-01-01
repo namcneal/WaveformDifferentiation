@@ -8,56 +8,48 @@ using namespace std;
  */
  
 int main(int argc, char **argv){
+	// Some ROOT settings
 	gStyle->SetOptStat(0);
 	gErrorIgnoreLevel = kWarning;
 	
-	
+	// Read in the path for the ROOT files and the run name.
+	// Example of two arguments: ../../data take103
 	string filePathPrefix = argv[1],
 		   fileName = argv[2];
+		   
+	// Define the name of the ROOT file with the raw data in it
+    string raw_file_name = filePathPrefix + '/' fileName + "_raw_data.root",
+    raw_data_tree_name = fileName + "_raw";
 	
-	string new_file_name = filePathPrefix + '/' + fileName + "_normalization_params.root",
-		   new_data_tree_name = fileName + "_normalization_params";
-	TFile* new_file=new TFile(new_file_name.c_str(), "recreate");
-	TTree* new_tree=new TTree(new_data_tree_name.c_str(),(fileName+"_normalization_params").c_str());
-	
-	if (!new_tree){
-		cout << "Could not creat the new " << fileName << "_course_time tree." << endl;
-	}
-	
-	string raw_file_name = filePathPrefix + '/' fileName + "_raw_data.root",
-		   raw_data_tree_name = fileName + "_raw";
+	// Open the ROOT file and the Tree it contains with the raw data 
 	TFile* raw_file=new TFile(raw_file_name.c_str(), "READ");
 	TTree* raw_tree = (TTree*)raw_file->Get(raw_data_tree_name.c_str());
 	
+	// Set the name of the file and ROOT Tree that will contain the normalization parameters 
+	string param_file_name = filePathPrefix + '/' + fileName + "_normalization_params.root",
+		   new_data_tree_name = fileName + "_normalization_params";
+		   
+	// Actually create the ROOT file and ROOT Tree to contain the normalization parameters
+	TFile* param_file = new TFile(param_file_name.c_str(), "recreate");
+	TTree* param_tree = new TTree(new_data_tree_name.c_str(),(fileName+"_normalization_params").c_str());
+	
+	// Check to see if the raw data tree and normalization parameter tree were correctly opened
 	if (!raw_tree){
 		cout << "\n\nCannot find raw data tree" << endl << endl;
 	}
+	if (!param_tree){
+		cout << "Could not creat the new " << fileName << "_course_time tree." << endl;
+	}
 	
-	double ped_near = 0, 
-		   ped_far = 0, 
-		   amp_near = 0, 
-		   amp_far = 0, 
-		   t_max_near = 0, 
-		   t_max_far = 0, 
-		   t_50_near = 0, 
-		   t_50_far = 0;
-	
+	// Define variables into which we will read raw data
 	int is_good_near = 0, 
 		is_good_far = 0;
 		
 	int adc_near[N_width*32] = {0},
 		adc_far[N_width*32] = {0};
-	
-	cout << endl << "Setting branch addresses for the new tree." << endl;
-	new_tree->Branch("ped_near", &ped_near, "ped_near/D");
-	new_tree->Branch("ped_far", &ped_far, "ped_far/D");
-	new_tree->Branch("amp_near", &amp_near, "amp_near/D");
-	new_tree->Branch("amp_far", &amp_far, "amp_far/D");
-	new_tree->Branch("t_max_near", &t_max_near, "t_max_near/D");
-	new_tree->Branch("t_max_far", &t_max_far, "t_max_far/D");
-	new_tree->Branch("t_50_near", &t_50_near, "t_50_near/D");
-	new_tree->Branch("t_50_far", &t_50_far, "t_50_far/D");
-	
+		
+	// Set the connection between the ROOT raw data tree and the variables defined above 
+	// through the variables' addresses in memory
 	cout << "Setting branch addresses for the raw tree" << "...adc n";
 	raw_tree->SetBranchAddress("adc_near", adc_near);
 	cout << "...adc f";
@@ -67,47 +59,93 @@ int main(int argc, char **argv){
 	cout << "...f quality." << endl;
 	raw_tree->SetBranchAddress("far_quality", &is_good_far);
 	
+	// Check the total number of entries, storing the number 
 	cout << "Geting the total number of entries." << endl;
 	int n_tot = raw_tree->GetEntries();
 	cout << "Read "<< n_tot <<" events from " << fileName << "_raw_data.root" << endl;
 	
-	int n_bad_data=0;
-	int n_bad_fit=0;
-	int n_fit=0;
+	// Variables to hold the data that will be moved into the normalization parameter file
+	double ped_near = 0, 
+	   ped_far = 0, 
+	   amp_near = 0, 
+	   amp_far = 0, 
+	   t_max_near = 0, 
+	   t_max_far = 0, 
+	   t_50_near = 0, 
+	   t_50_far = 0;
+
+	// Create branches in the parameter tree and connect them to the variables above
+	cout << endl << "Setting branch addresses for the new tree." << endl;
+	param_tree->Branch("ped_near", &ped_near, "ped_near/D");
+	param_tree->Branch("ped_far", &ped_far, "ped_far/D");
+	param_tree->Branch("amp_near", &amp_near, "amp_near/D");
+	param_tree->Branch("amp_far", &amp_far, "amp_far/D");
+	param_tree->Branch("t_max_near", &t_max_near, "t_max_near/D");
+	param_tree->Branch("t_max_far", &t_max_far, "t_max_far/D");
+	param_tree->Branch("t_50_near", &t_50_near, "t_50_near/D");
+	param_tree->Branch("t_50_far", &t_50_far, "t_50_far/D");
 	
+	// Variables for fitting 
+	int n_bad_data=0,
+	    n_bad_fit=0,
+		n_fit=0;
+	
+	// ROOT histograms that will be filled with data from each event
+	// The first stores the difference between the near and far signals' 50% rising edge times
+	// The second holds the difference between the two signals' maximium times
 	TH1D* h_t_diff_50=new TH1D("h_t_diff_50", "Distribution of Time Difference; #Delta t  [ns]; count", 100, -50., 150.);
 	TH1D* h_t_diff_max=new TH1D("h_t_diff_max", "Distribution of Time Difference; #Delta t  [ns]; count", 100, -50., 150.);
 	
+	// Iterates through each event in the data file. For take103, there are 3000 events
 	cout << "Starting loop" << endl;
 	for (int i=0; i<n_tot; i++){
-		
+		// Read from the raw data 
 		cout << "Getting entry from raw data tree;" << endl;
 		raw_tree->GetEntry(i);
 		
+		// Find the normalization parameters and modify the variable values.
+		// Note how the parameters are passed by reference
 		cout << "Running the normalization function and filling new tree." << endl;
 		int flag_near=channel_norm_fit(adc_near, &ped_near, &amp_near, &t_max_near, &t_50_near);
 		int flag_far=channel_norm_fit(adc_far, &ped_far, &amp_far, &t_max_far, &t_50_far);
 		cout << flag_near << " " << flag_far<<endl;
-		new_tree->Fill();
 		
+		// Transfer the parameter variables values into the branches of the appropriate tree
+		param_tree->Fill();
+		
+		// Store additional data in the good events (those with no empty channels, etc.) 
 		cout << "Determining good and bad data" << endl;
-		if (is_good_near==0||is_good_far==0) n_bad_data++;
+		if (!is_good_near||!is_good_far){
+			n_bad_data++;
+		}
 		else{
+			// Add the timing details to the histograms only if the fit was acceptable
+			// Otherwise, do nothing with the 50% rising edge times and maximum times
 			if (flag_near==0&&flag_far==0){
 				n_fit++;
 				h_t_diff_50->Fill(t_50_far-t_50_near);
 				h_t_diff_max->Fill(t_max_far-t_max_near);
 			}
-			else n_bad_fit++;
+			
+			else{
+				n_bad_fit++;
+			}
 		}
-		if ((i+1)%500==0) cout<<"        "<<(i+1)<<" events have been processed."<<endl;
+		
+		// Updates to the console every 500 events
+		if ((i+1)%500==0) cout<<"\t\t"<<(i+1)<<" events have been processed."<<endl;
 	}
+	
+	// Updates to the console
 	cout<<"    "<<n_bad_data<<" events have empty channel(s)."<<endl;
 	cout<<"    "<<n_bad_fit<<" events have bad fitting in either channel."<<endl;
 	cout<<"    "<<n_fit<<" events have proper fits and time difference of signals were calculated."<<endl;
-	new_file->cd();
-	new_tree->Write();
 	
+	// Change the directory to the parameter file we created and write the parameter tree to it
+	param_file->cd();
+	param_tree->Write();
+	
+	// Create plots for the two time-difference histograms.
 	string plot_name = filePathPrefix  + fileName + "_normalization_params.pdf";
 	TCanvas* c0=new TCanvas("0", "", 800, 600);
 	

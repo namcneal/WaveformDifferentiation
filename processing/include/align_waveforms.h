@@ -36,6 +36,6 @@ const double photon_high=20.;
 const double neutron_high=150.;
 
 void align_waveform(int raw_adc_far[],
-					int t_50_near, int t_50_far, int pedestal_far,
+					int t_50_near, int t_50_far, int pedestal_far, double amp_far,
 					int aligned_adc_far[], bool &isNeutron,
 					int &num_neutrons, int &num_photons);

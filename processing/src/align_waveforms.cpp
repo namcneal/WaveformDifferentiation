@@ -2,11 +2,10 @@
 
 using namespace std;
 
-/* Takes the original waveform data and applies the normalization parameters to the "good data"
+/* Takes the original waveform data and applies the normalization parameters to the "good data" of the FAR channel. 
  * Uses the raw data and normalization parameter ROOT files
  * 
- * Returns a new 'aligned' waveform. It has been aligned so that the waveform array starts a fixed distance
- * before the 50% rising edge. It has also been aligned vertically by subtracting the pedestal.
+ * Returns a ROOT file with the new normalized waveforms. It has been baseline subtracted and then normalized through the amplification parameter. 
  */
  
 int main(int argc, char **argv){
@@ -88,13 +87,14 @@ int main(int argc, char **argv){
 	TTree* aligned_tree = new TTree(aligned_data_tree_name.c_str(), (fileName+"_aligned_waveforms").c_str());
 
 	// Define variables for the aligned data
-	int aligned_adc_far[N_width*32] = {0};  // Array to hold an aligned event
+	int adc_event_data[N_width*32] = {0};   // Array to hold an aligned event
 	bool isNeutron = false;			// Whether the event was a neutron (true) or a gamma event (false)
+	int t_50_rising_edge = -1;		// Time of the 50% rising edge, given as an index
 	
-
 	// Create branches in the tree to store the data for each event
-	aligned_tree->Branch("aligned_ADC_far", aligned_adc_far, Form("adc_near[%i]/I", N_width*32));
+	aligned_tree->Branch("ADC_event_data", adc_event_data, Form("adc_event_data[%i]/I", N_width*32));
 	aligned_tree->Branch("isNeutron", &isNeutron, "isNeuton/O");
+	aligned_tree->Branch("t_50_rising_edge",  &t_50_rising_edge,  "t_50_rising_edge");
 	
 	// Variables for keeping track, not stored 
 	int num_neutrons = 0,
@@ -112,9 +112,12 @@ int main(int argc, char **argv){
 		if (is_good_far && is_good_near && t_max_far!=0. && t_max_near!=0.){
 			// Perform the vertical (pedestal correction) and horizontal (time shifting) alignment			
 			align_waveform(adc_far, 
-						   t_50_near, t_50_far, ped_far,
-						   aligned_adc_far, isNeutron,
-						   num_neutrons, num_photons);
+					   t_50_near, t_50_far, ped_far, amp_far,
+					   aligned_adc_far, isNeutron,
+					   num_neutrons, num_photons);
+
+			// Transfer the 50% edge index to the new file
+			t_50_rising_edge = t_50_far;
 
 			// Transfer the variable values into the tree		   
 			aligned_tree->Fill();
@@ -137,37 +140,32 @@ int main(int argc, char **argv){
 
 
 void align_waveform(int raw_adc_far[],
-					int t_50_near, int t_50_far, int pedestal_far,
-					int aligned_adc_far[], bool &isNeutron,
-					int &num_neutrons, int &num_photons){
+			int t_50_near, int t_50_far, int pedestal_far, double amp_far, 
+			int aligned_adc_far[], bool &isNeutron,
+			int &num_neutrons, int &num_photons){
 	
-		double start_time = t_50_far - 20.;
-		int start_TDC = (int)ceil(start_time);
-		if (start_TDC%2){
-			start_TDC += 1;
-		}
-		start_TDC/=2;
-		
-		// Fill in a new waveform array that starts at the index we chose with the 50% rising edge
-		// The rest of the new array will be zeros
-		for(int k = start_TDC; k < 32*N_width - start_TDC; k++){
-			// Set the new array using the old array
-			aligned_adc_far[k - start_TDC] = raw_adc_far[k];
-			
-			// Pedestal/background subtract the new array to align vertically
-			aligned_adc_far[k - start_TDC] -= pedestal_far;
-		}
-		
-		// Tag the event as either a neutron or a gamma based on the time difference between near and far channels
-		double t_50_diff = t_50_far - t_50_near;
-		if (t_50_diff > neutron_low && t_50_diff < neutron_high){
-			isNeutron = true;
-			num_neutrons++;
-		}
-		else if (t_50_diff > photon_low && t_50_diff < photon_high){
-			isNeutron = false;
-			num_photons++;
-		}
+	// Background/pedestal subtraction and then normalize
+	for(int k = start_TDC; k < 32*N_width; k++){
+		// Set the new array using the old array
+		aligned_adc_far[k] = raw_adc_far[k];
+	
+		// Pedestal/background subtract the new array to align vertically
+		aligned_adc_far[k] -= pedestal_far;
+
+		// Normalize based on amplification parameter
+		aligned_adc_far[k] /= amp_far
+	}
+
+	// Tag the event as either a neutron or a gamma based on the time difference between near and far channels
+	double t_50_diff = t_50_far - t_50_near;
+	if (t_50_diff > neutron_low && t_50_diff < neutron_high){
+		isNeutron = true;
+		num_neutrons++;
+	}
+	else if (t_50_diff > photon_low && t_50_diff < photon_high){
+		isNeutron = false;
+		num_photons++;
+	}
 }
 
 

@@ -14,12 +14,12 @@ int main(int argc, char **argv){
 	
 	// Read in the path for the ROOT files and the run name.
 	// Example of two arguments: ../../data take103
-	string filePathPrefix = argv[1],
-		   fileName = argv[2];
+	string filePathPrefix = argv[1], 
+			fileName = argv[2];
 		   
 	// Define the name of the ROOT file with the raw data in it
-    string raw_file_name = filePathPrefix + '/' fileName + "_raw_data.root",
-    raw_data_tree_name = fileName + "_raw";
+    string raw_file_name = filePathPrefix + '/' + fileName + "_raw_data.root",
+    	   raw_data_tree_name = fileName + "_raw";
 	
 	// Open the ROOT file and the Tree it contains with the raw data 
 	TFile* raw_file=new TFile(raw_file_name.c_str(), "READ");
@@ -42,7 +42,7 @@ int main(int argc, char **argv){
 	}
 	
 	// Define variables into which we will read raw data
-	int is_good_near = 0, 
+	bool is_good_near = 0, 
 		is_good_far = 0;
 		
 	int adc_near[N_width*32] = {0},
@@ -100,12 +100,10 @@ int main(int argc, char **argv){
 	cout << "Starting loop" << endl;
 	for (int i=0; i<n_tot; i++){
 		// Read from the raw data 
-		cout << "Getting entry from raw data tree;" << endl;
 		raw_tree->GetEntry(i);
 		
 		// Find the normalization parameters and modify the variable values.
 		// Note how the parameters are passed by reference
-		cout << "Running the normalization function and filling new tree." << endl;
 		int flag_near=channel_norm_fit(adc_near, &ped_near, &amp_near, &t_max_near, &t_50_near);
 		int flag_far=channel_norm_fit(adc_far, &ped_far, &amp_far, &t_max_far, &t_50_far);
 		cout << flag_near << " " << flag_far<<endl;
@@ -114,7 +112,7 @@ int main(int argc, char **argv){
 		param_tree->Fill();
 		
 		// Store additional data in the good events (those with no empty channels, etc.) 
-		cout << "Determining good and bad data" << endl;
+		cout << is_good_far << endl;
 		if (!is_good_near||!is_good_far){
 			n_bad_data++;
 		}

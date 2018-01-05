@@ -10,7 +10,7 @@ using namespace std;
  * 
  * The N_width, N_spill, and other arguments are file specific and depend on the run. 
 */
-int main(int argc, char **argv)
+int main(int argc, char **argv){
 	// The path to the raw data file (example: ../../data) and 
      	// the name of the data file itself, without the extension (example: take103)
 	string filePathPrefix = argv[1],
@@ -18,7 +18,7 @@ int main(int argc, char **argv)
 	
 	// Parameters for the parsing 
 	int n_width=atoi(argv[3]);	// Number of words in the ADC event 
-	int sampling_len=n_width*32;	// Total length of each ADC event 
+	const int sampling_len=n_width*32;	// Total length of each ADC event 
 	int n_spill=atoi(argv[4]); 	// Number of spills
 	
 	int chan1=atoi(argv[5]);	// 
@@ -52,8 +52,13 @@ int main(int argc, char **argv)
 	TTree *tree =  new TTree (tree_name.c_str(), tree_name.c_str());
 	
 	// Variables for reading in data
-	int adc_near[sampling_len] = {0}; 	// Stores the events from the near detector
-	int adc_far[sampling_len]  = {0};	// Stores the events from the far detector
+	int adc_near[sampling_len]; 	// Stores the events from the near detector
+	int adc_far[sampling_len];	    // Stores the events from the far detector
+	
+	for(int i = 0; i < sampling_len; i++){
+		adc_near[i] = 0;
+		adc_far[i]  = 0;
+	}
 	
 	// Variables for judging the quality of an event signal
 	bool near_quality = 0,
@@ -72,7 +77,7 @@ int main(int argc, char **argv)
 	
 	// Iterate through each event in the data file and calculate each of the four variables 
 	for (int i=0; i<n_spill; i++){
-		for (int j=0; j<n_event; j++){
+		for (int j=0; j < n_event; j++){
 			
 			// Read in the header and then dump it
 			for (int k=0; k<HEADER_LEN; k++) {
@@ -115,7 +120,7 @@ int main(int argc, char **argv)
 				for (int l=0; l<(3-chan2); l++){fscanf(in, "%x", &junk);}
 			}
 
-			// Get rid off the mis-triggered first event in each spill
+			// Excludes j = 0 to get rid off the mis-triggered first event in each spill
 			if (j!=0) {
 				// Check the near and far events
 				near_quality = quality_check(adc_near, sampling_len);
@@ -151,15 +156,16 @@ int main(int argc, char **argv)
 }
 
 // Takes an event array and its length
-// Returns 1 for good data and 
-//         0 for empty channel
+// Returns true  for good data and 
+//         false for empty channel
 bool quality_check(int* adc, int sampling_len){
     bool flag = false;
     
-	for (int i=0; i<sampling_len; i++){
-		if (adc[i]>400) {
+	for (int i = 0; i < sampling_len; i++){
+		if (adc[i] > 400) {
 			flag = true; 
-			break;}
+			break;
+		}
 	}
 	
 	return flag;

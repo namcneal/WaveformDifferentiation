@@ -122,17 +122,17 @@ int main(int argc, char **argv){
 			}
 			start_TDC/=2;
 
-`			// Set the starting index that will be transferred to the normalized waveform file
+			// Set the starting index that will be transferred to the normalized waveform file
 			start_index = start_TDC;
 
 			// Perform the vertical (pedestal correction) and scaling based on amplitude		
 			normalize_waveform(adc_far, 
 					   t_50_near, t_50_far, ped_far, amp_far,
-					   normalizeed_adc_far, isNeutron,
+					   normalized_adc_event, isNeutron,
 					   num_neutrons, num_photons);
 
 			// Transfer the 50% edge index to the new file
-			t_50_rising_edge = t_50_far;
+			t_50_rising_index = t_50_far;
 
 			// Transfer the variable values into the tree		   
 			normalized_tree->Fill();
@@ -168,7 +168,7 @@ void normalize_waveform(int raw_adc_far[],
 		normalized_adc_far[k] -= pedestal_far;
 
 		// Normalize based on amplification parameter
-		normalized_adc_far[k] /= amp_far
+		normalized_adc_far[k] /= amp_far;
 	}
 
 	// Tag the event as either a neutron or a gamma based on the time difference between near and far channels

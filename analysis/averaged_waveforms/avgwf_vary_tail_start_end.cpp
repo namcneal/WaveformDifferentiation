@@ -48,12 +48,15 @@ void calculateQVal(double tailStart, double tailEnd,
 				   TProfile* avgNeutron, TProfile* avgPhoton,
 				   double &neutronQVal, double &photonQVal);
 					  
-int main(int argc, char **argv){
-	cout << endl << endl << "Loading average waveform data" << endl;
-	string dataFileName = argv[2],
-		   dataFolderPath = argv[1];
+void avgwf_vary_tail_start_end(string dataFolderPath, string dataFileName){	
+	string full_file_path = dataFolderPath + '/' + dataFileName + "_average_waveforms.root";
+	cout << endl << endl <<"Loading averaged waveform data from " << full_file_path << endl;
 	
-	TFile* waveformFile=new TFile((dataFolderPath + '/' + dataFileName + "_average_waveforms.root").c_str(), "READ");
+	TFile* waveformFile = TFile::Open(full_file_path.c_str());
+	if(!waveformFile){
+		cout << "Could not open " << full_file_path << endl;
+	}
+	
 	TProfile *avgNeutronWaveform,
 			 *avgPhotonWaveform;
 	
@@ -77,10 +80,10 @@ int main(int argc, char **argv){
 				 startStepSize = abs(maxTailStart - minTailStart) / numSteps,
 				 endStepSize   = abs(maxTailEnd   - minTailEnd)   / numSteps;
 				 
-	TGraph2D *neutronQVals = new TGraph2D(numSteps),
-			 *photonQVals  = new TGraph2D(numSteps);
-	neutronQVals->SetName("Neutron Q-Values");
-	photonQVals->SetName("Photon Q-Values");
+	TGraph2D *neutronQValGraph = new TGraph2D(numSteps),
+			 *photonQValGraph  = new TGraph2D(numSteps);
+	neutronQValGraph->SetName("Neutron Q-Values");
+	photonQValGraph->SetName("Photon Q-Values");
 	
 	int i = 0;
 	cout << "Starting Q value calculations" << endl << "\tStep...";
@@ -91,8 +94,8 @@ int main(int argc, char **argv){
 						  avgNeutronWaveform, avgPhotonWaveform,
 						  neutronQVal, photonQVal);
 
-			neutronQVals->SetPoint(i, tailStart, tailEnd, neutronQVal);
-			 photonQVals->SetPoint(i, tailStart, tailEnd, photonQVal );
+			neutronQValGraph->SetPoint(i, tailStart, tailEnd, neutronQVal);
+			 photonQValGraph->SetPoint(i, tailStart, tailEnd, photonQVal );
 									
 		}
 		
@@ -100,14 +103,12 @@ int main(int argc, char **argv){
 
 	}
 	cout << endl << "Q-value calculations completed." << endl << endl;
-//	
-//	TCanvas *diffCanvas = new TCanvas("qValDiff", "Q-value Difference", 700, 600);
-//	qValDiffPlot->Draw("COLZ");
-//	
-//
-//	diffCanvas->SaveAs((dataFolderPath + dataFileName + "_varied_start_tail_difference.png").c_str(), "png");
 	
-	return 0;
+	TCanvas *diffCanvas = new TCanvas("qValDiff", "Q-value Relative Difference", 700, 600);
+	neutronQValGraph->Draw("COLZ");
+	
+
+	diffCanvas->SaveAs((dataFolderPath + dataFileName + "_varied_start_tail_difference.png").c_str(), "png");
 }
 
 void calculateQVal(double tailStart, double tailEnd, 

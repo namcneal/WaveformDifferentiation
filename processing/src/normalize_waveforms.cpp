@@ -7,14 +7,10 @@ using namespace std;
  * 
  * Returns a ROOT file with the new normalized waveforms. It has been baseline subtracted and then normalized through the amplification parameter. 
  */
- 
-int main(int argc, char **argv){
-	
-	// The path to the raw data file (example: ../../data) and 
-     	// the name of the data file itself, without the extension (example: take103)
-	string filePathPrefix = argv[1],
-		   fileName = argv[2];
-	
+
+// The path to the raw data file (example: ../../data) and 
+// the name of the data file itself, without the extension (example: take103)
+int normalize_waveforms(string filePathPrefix, string fileName){
 	// The names for reading in raw data from the ROOT file
 	string raw_file_name = filePathPrefix + '/' + fileName + "_raw_data.root",
 	       raw_data_tree_name = fileName + "_raw";
@@ -38,11 +34,11 @@ int main(int argc, char **argv){
 	if (!param_tree) cout << endl << "Cannot find parameter data tree" << endl;
 	
 	// Create the variables that will be read into from the raw data ROOT file
-	bool is_good_near = false, 
-      	     is_good_far  = false;
-		
 	int adc_near[N_width*32] = {0},
 	    adc_far[N_width*32] = {0};
+	
+	bool is_good_near = false, 
+      	     is_good_far  = false;
 	
 	// Set the connection between the ROOT raw data tree and the variables defined above 
 	// through the variables' addresses in memory
@@ -89,14 +85,14 @@ int main(int argc, char **argv){
 	// Define variables for the normalized data
 	int normalized_adc_event[N_width*32] = {0};   // Array to hold an normalized event
 	bool isNeutron = false;			// Whether the event was a neutron (true) or a gamma event (false)
-	int t_50_rising_index = -1;		// Time of the 50% rising edge, given as an index
+	double t_50_rising_index = -1;		// Time of the 50% rising edge, given as an index
 	int start_index = -1;			// Time of the start of an event, based on the 50% rising edge
 	
 	// Create branches in the tree to store the data for each event
 	normalized_tree->Branch("normalized_adc_event", normalized_adc_event, Form("normalized_adc_event[%i]/I", N_width*32));
 	normalized_tree->Branch("isNeutron", &isNeutron, "isNeuton/O");
-	normalized_tree->Branch("t_50_rising_index",  &t_50_rising_index,  "t_50_rising_index");
-	normalized_tree->Branch("start_index",  &start_index,  "start_index");
+	normalized_tree->Branch("t_50_rising_index",  &t_50_rising_index,  "t_50_rising_index/D");
+	normalized_tree->Branch("start_index",  &start_index,  "start_index/I");
 	
 	
 	// Variables for keeping track, not stored 
@@ -110,10 +106,15 @@ int main(int argc, char **argv){
 		// Read from the two trees
 		raw_tree->GetEntry(i);
 		param_tree->GetEntry(i);
+		
+//		cout << t_50_far << endl;
 
 		// normalize and store the waveforms only for the good events for which the maximum time is positive as well
 		if (is_good_far && is_good_near && t_max_far!=0. && t_max_near!=0.){
 
+			// Transfer the 50% edge index to the new file
+			t_50_rising_index = t_50_far;	
+			
 			// Define the start of the event based on the 50% rising edge 
 			double start_time = t_50_far - 20.;
 			int start_TDC = (int)ceil(start_time);
@@ -130,9 +131,6 @@ int main(int argc, char **argv){
 					   t_50_near, t_50_far, ped_far, amp_far,
 					   normalized_adc_event, isNeutron,
 					   num_neutrons, num_photons);
-
-			// Transfer the 50% edge index to the new file
-			t_50_rising_index = t_50_far;
 
 			// Transfer the variable values into the tree		   
 			normalized_tree->Fill();
@@ -168,7 +166,7 @@ void normalize_waveform(int raw_adc_far[],
 		normalized_adc_far[k] -= pedestal_far;
 
 		// Normalize based on amplification parameter
-		normalized_adc_far[k] /= amp_far;
+//		normalized_adc_far[k] /= amp_far;
 	}
 
 	// Tag the event as either a neutron or a gamma based on the time difference between near and far channels

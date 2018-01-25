@@ -121,7 +121,7 @@ int main(int argc, char **argv){
 			}
 
 			// Excludes j = 0 to get rid off the mis-triggered first event in each spill
-			if (j!=0) {
+			if (j != 0) {
 				// Check the near and far events
 				near_quality = quality_check(adc_near, sampling_len);
 				far_quality = quality_check(adc_far, sampling_len);

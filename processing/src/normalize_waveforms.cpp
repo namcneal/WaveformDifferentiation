@@ -116,13 +116,11 @@ int normalize_waveforms(string filePathPrefix, string fileName){
 			t_50_rising_index = t_50_far;	
 			
 			// Define the start of the event based on the 50% rising edge 
-			double start_time = t_50_far - 20.;
-			int start_TDC = (int)ceil(start_time);
-			if (start_TDC%2){
-				start_TDC += 1;
-			}
+			double start_time=t_50_far-20.;
+			int start_TDC=(int)ceil(start_time);
+			if (start_TDC%2) start_TDC+=1;
 			start_TDC/=2;
-
+			
 			// Set the starting index that will be transferred to the normalized waveform file
 			start_index = start_TDC;
 

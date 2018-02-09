@@ -38,7 +38,7 @@ void generateAverageWaveforms(string dataFolderPath, string dataFileName, int nu
 	cout << "Read "<< n_tot <<" events from " << dataFileName << "_normalized_waveforms.root" << endl;
 	
 	// Variables to hold the aligned data
-	int normalized_adc_event[N_width*32] = {0};  // Array to hold an aligned event
+	double normalized_adc_event[N_width*32] = {0};  // Array to hold an aligned event
 	bool isNeutron = false;						 // Whether the event was a neutron (true) or a gamma event (false)
 	double t_50_rising_index = -1;			     // Time of the 50% rising edge, given as an index
 	int start_index = -1;
@@ -65,24 +65,24 @@ void generateAverageWaveforms(string dataFolderPath, string dataFileName, int nu
 	for (int i=0; i<n_tot; i++){
 		normalized_tree->GetEntry(i);
 		
-		// Align the event according to the 50% rising edge and store it in the proper histogram
-		if(isNeutron){
+		if (isNeutron){
 			for (int j=0; j<110; j++){
-				sct_pts_neutron->SetPoint(num_neutron*110 + j, 2.*(double)(start_index + j) - t_50_rising_index, normalized_adc_event[start_index + j]);
-				hist_n->Fill(2.*(double)(start_index + j) - t_50_rising_index, normalized_adc_event[start_index + j]);
+				sct_pts_neutron->SetPoint(num_neutron*110+j, 2.*(double)(start_index+j)-t_50_rising_index, normalized_adc_event[start_index+j]);
+				hist_n->Fill(2.*(double)(start_index+j)-t_50_rising_index, normalized_adc_event[start_index+j]);
 			}
 			num_neutron++;
 		}
-		else{
+		if (!isNeutron){
 			for (int j=0; j<110; j++){
-				sct_pts_photon->SetPoint(num_photon*110 + j, 2.*(double)(start_index + j) - t_50_rising_index, normalized_adc_event[start_index + j]);
-				hist_p->Fill(2.*(double)(start_index + j) - t_50_rising_index , normalized_adc_event[start_index + j]);
+				sct_pts_photon->SetPoint(num_photon*110+j, 2.*(double)(start_index+j)-t_50_rising_index, normalized_adc_event[start_index+j]);
+				hist_p->Fill(2.*(double)(start_index+j)-t_50_rising_index, normalized_adc_event[start_index+j]);
 			}
 			num_photon++;
 		}
-
+		
 		if ((i+1)%500==0) cout<<"        "<<(i+1)<<" events have been processed."<<endl;
 	}
+	
 	cout<<"\t"<<num_neutron<<" neutron events are present."<<endl;
 	cout<<"\t"<<num_photon<<" photon events are present."<<endl;
 	
@@ -92,33 +92,44 @@ void generateAverageWaveforms(string dataFolderPath, string dataFileName, int nu
 	TFile* waveformFile = new TFile((dataFolderPath +  "/averaged_waveforms/" +  dataFileName + "_average_waveforms.root").c_str(), "RECREATE");
 	cout << "Writing scatter plots, histograms, and X-profiles to file" << endl;
 
+	// Calculate the averages of the two histograms to obtain the averaged waveform and store the average to the file
+	TProfile* avgNeutronWf = hist_n->ProfileX();
+	TProfile* avgPhotonWf  = hist_p->ProfileX();
+	
+	avgNeutronWf->Write();
+	avgPhotonWf->Write();
+	
 	TCanvas* c0 = new TCanvas("0", "Normalized Neutron and Photon Waveforms, All Overlaid", 3200, 1200);
 	c0->Divide(2,1);
 	string plotName = dataFolderPath +  "/averaged_waveforms" + '/' + dataFileName + "_normalized_overlaid_waveforms_all.pdf";
-
+	
 	sct_pts_neutron->SetMarkerStyle(6);
-	sct_pts_neutron->SetMarkerColor(kBlue);
+	sct_pts_neutron->SetMarkerColor(kRed);
 	sct_pts_photon->SetMarkerStyle(6);
-	sct_pts_photon->SetMarkerColor(kRed);
+	sct_pts_photon->SetMarkerColor(kBlue);
 	c0->cd(1);
 	sct_pts_neutron->Draw("AP");
 	c0->cd(2);
 	sct_pts_photon->Draw("AP");
-	c0->Print(plotName.c_str(), "pdf");
 	cout << "Scatter plots saved" << endl;
+	c0->Print((plotName + '(').c_str(), ".pdf");
 
-
-	// Write the original histograms to the file
-	hist_n->Write();
-	hist_p->Write();
-
-	// Calculate the averages of the two histograms to obtain the averaged waveform and store the average to the file
-	TProfile* avgNeutronWf = hist_n->ProfileX();
-	TProfile* avgPhotonWf  = hist_p->ProfileX();
-
-	avgNeutronWf->Write();
-	avgPhotonWf->Write();
-
+	c0->cd(1);
+	hist_n->Draw("COLZ1");
+	c0->cd(2);
+	hist_p->Draw("COLZ1");
+	c0->Print((plotName).c_str(), ".pdf"T);
+	
+	avgNeutronWf->SetMarkerColor(kRed);
+	avgPhotonWf->SetMarkerColor(kBlue);
+	avgNeutronWf->SetLineColor(kRed);
+	avgPhotonWf->SetLineColor(kBlue);
+	c0->cd(1);
+	avgNeutronWf->Draw("E");
+	c0->cd(2);
+	avgPhotonWf->Draw("E");
+	c0->Print((plotName + ')').c_str(), ".pdf");
+	cout<<"Average waveform constructed..."<<endl;
 
 	// Close all files
 	waveformFile->Close();

@@ -64,5 +64,19 @@
 ./generate_avg_waveform_cpp.so: /usr/include/root/TH2.h
 ./generate_avg_waveform_cpp.so: /usr/include/root/TMatrixFBasefwd.h
 ./generate_avg_waveform_cpp.so: /usr/include/root/TMatrixDBasefwd.h
+./generate_avg_waveform_cpp.so: /usr/include/root/TCanvas.h
+./generate_avg_waveform_cpp.so: /usr/include/root/TPad.h
+./generate_avg_waveform_cpp.so: /usr/include/root/TVirtualPad.h
+./generate_avg_waveform_cpp.so: /usr/include/root/TAttPad.h
+./generate_avg_waveform_cpp.so: /usr/include/root/TVirtualX.h
+./generate_avg_waveform_cpp.so: /usr/include/root/TAttText.h
+./generate_avg_waveform_cpp.so: /usr/include/root/GuiTypes.h
+./generate_avg_waveform_cpp.so: /usr/include/root/Buttons.h
+./generate_avg_waveform_cpp.so: /usr/include/root/TQObject.h
+./generate_avg_waveform_cpp.so: /usr/include/root/TAttBBox2D.h
+./generate_avg_waveform_cpp.so: /usr/include/root/TPoint.h
+./generate_avg_waveform_cpp.so: /usr/include/root/TAttCanvas.h
+./generate_avg_waveform_cpp.so: /usr/include/root/TCanvasImp.h
+./generate_avg_waveform_cpp.so: /usr/include/root/TGraph.h
 ./generate_avg_waveform_cpp.so: /usr/include/root/cintdictversion.h /usr/include/root/RVersion.h
 generate_avg_waveform_cpp__ROOTBUILDVERSION= 5.34/36

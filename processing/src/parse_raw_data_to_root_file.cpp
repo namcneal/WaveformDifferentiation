@@ -10,22 +10,21 @@ using namespace std;
  * 
  * The N_width, N_spill, and other arguments are file specific and depend on the run. 
 */
-int main(int argc, char **argv){
+int parse_raw_data_to_root_file(string filePathPrefix, string fileName,  int n_width, int n_spill, int chan1, string n_f_1, int chan2, string n_f_2){
 	// The path to the raw data file (example: ../../data) and 
      	// the name of the data file itself, without the extension (example: take103)
-	string filePathPrefix = argv[1],
-		   fileName   = argv[2];
 	
 	// Parameters for the parsing 
-	int n_width=atoi(argv[3]);	// Number of words in the ADC event 
+	// int n_width=atoi(argv[3]);	// Number of words in the ADC event 
 	const int sampling_len=n_width*32;	// Total length of each ADC event 
-	int n_spill=atoi(argv[4]); 	// Number of spills
+	// int n_spill=atoi(argv[4]); 	// Number of spills
 	
-	int chan1=atoi(argv[5]);	// 
-	char* label1=argv[6];		// Label for channel 1, near or far
-	int chan2=atoi(argv[7]);	// 
-	char* label2=argv[8];		// Label for channel 2, near or far
-	
+	// int chan1=atoi(argv[5]);	// 
+	const char* label1 = n_f_1.c_str();		// Label for channel 1, near or far
+	// int chan2=atoi(argv[7]);	// 
+	const char* label2 = n_f_2.c_str();		// Label for channel 2, near or far
+
+
 	int n_event=2048*16/(sampling_len*4+HEADER_LEN);
 	int n_skip=2048*16-n_event*(sampling_len*4+HEADER_LEN);
 	int index=0;

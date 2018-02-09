@@ -83,13 +83,13 @@ int normalize_waveforms(string filePathPrefix, string fileName){
 	TTree* normalized_tree = new TTree(normalized_data_tree_name.c_str(), (fileName+"_normalized_waveforms").c_str());
 
 	// Define variables for the normalized data
-	int normalized_adc_event[N_width*32] = {0};   // Array to hold an normalized event
+	double normalized_adc_event[N_width*32] = {0};   // Array to hold an normalized event
 	bool isNeutron = false;			// Whether the event was a neutron (true) or a gamma event (false)
 	double t_50_rising_index = -1;		// Time of the 50% rising edge, given as an index
 	int start_index = -1;			// Time of the start of an event, based on the 50% rising edge
 	
 	// Create branches in the tree to store the data for each event
-	normalized_tree->Branch("normalized_adc_event", normalized_adc_event, Form("normalized_adc_event[%i]/I", N_width*32));
+	normalized_tree->Branch("normalized_adc_event", normalized_adc_event, Form("normalized_adc_event[%i]/D", N_width*32));
 	normalized_tree->Branch("isNeutron", &isNeutron, "isNeuton/O");
 	normalized_tree->Branch("t_50_rising_index",  &t_50_rising_index,  "t_50_rising_index/D");
 	normalized_tree->Branch("start_index",  &start_index,  "start_index/I");
@@ -153,9 +153,9 @@ int normalize_waveforms(string filePathPrefix, string fileName){
 
 
 void normalize_waveform(int raw_adc_far[],
-			int t_50_near, int t_50_far, int pedestal_far, double amp_far, 
-			int normalized_adc_far[], bool &isNeutron,
-			int &num_neutrons, int &num_photons){
+						int t_50_near, int t_50_far, int pedestal_far, double amp_far, 
+						double normalized_adc_far[], bool &isNeutron,
+						int &num_neutrons, int &num_photons){
 	
 	// Background/pedestal subtraction and then normalize
 	for(int k = 0; k < 32*N_width; k++){
@@ -166,7 +166,7 @@ void normalize_waveform(int raw_adc_far[],
 		normalized_adc_far[k] -= pedestal_far;
 
 		// Normalize based on amplification parameter
-//		normalized_adc_far[k] /= amp_far;
+		normalized_adc_far[k] /= amp_far;
 	}
 
 	// Tag the event as either a neutron or a gamma based on the time difference between near and far channels

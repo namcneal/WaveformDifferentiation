@@ -6,6 +6,8 @@
 # include "TFile.h"
 # include "TProfile.h"
 # include "TH2.h"
+#include "TCanvas.h"
+#include "TGraph.h"
 
 
 const double PERTDC=2.;

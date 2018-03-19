@@ -1,49 +1,70 @@
+#include <iostream>
+
+#include "TCanvas.h"
+#include "TColor.h"
+#include "TFile.h"
+#include "TGraph.h"
+#include "TMultiGraph.h"
+
 #include "../qval_calculation_functions.h"
 
-string dataFolderPath = "../data",
-       dataFileName = "take103";
+using namespace std;
+void qvals_vary_start_with_end_at_170(string dataFolderPath, string dataFileName){
+	
+	string avgWaveformROOTFileName = dataFolderPath + "/" + dataFileName + "_average_waveforms.root";
 
-string avgWaveformROOTFileName = dataFolderPath + "/" + dataFileName + "_average_waveforms.root";
+	TFile * waveformFile = new TFile(avgWaveformROOTFileName.c_str(), "READ");
+		
+	if(!waveformFile){
+		cout << "Could not find/read the waveform file" << endl;
+	}
 
-TFile * waveformFile = new TFile(avgWaveformROOTFileName.c_str(), "READ");
-    
-if(!waveformFile){
-    cout << "Could not find/read the waveform file";
-}
+	cout << "Read in the waveform file" << endl;
 
-cout << "Read in the waveform file";
+	TProfile * avgNeutronWaveform = NULL,
+			 * avgPhotonWaveform  = NULL;
+	waveformFile->GetObject("hist_n_pfx", avgNeutronWaveform);
+	waveformFile->GetObject("hist_p_pfx", avgPhotonWaveform);
 
-TProfile * avgNeutronWaveform = NULL,
-         * avgPhotonWaveform  = NULL;
-waveformFile->GetObject("hist_n_pfx", avgNeutronWaveform);
-waveformFile->GetObject("hist_p_pfx", avgPhotonWaveform);
+	int numSteps = 100,
+		minTailStart = 25,
+		maxTailStart  = 120,
+		tailEnd      = 170;
 
-#define numSteps 150
+	double stepSize = (maxTailStart - minTailStart) / (double)numSteps;
 
-int minTailStart = 10,
-    maxTailStart  = 100,
-    tailEnd      = 170;
+	double tailStart = 0,
+		   neutronQVal = 0,
+		   photonQVal  = 0;
 
-double stepSize = (maxTailStart - minTailStart) / numSteps;
+	TGraph  *neutronGraph = new TGraph(),
+			*photonGraph  = new TGraph();
 
-double tailStart = 0,
-       neutronQVal = 0,
-       photonQVal  = 0;
-
-double tailStartArray[numSteps],
-       neutronQValArray[numSteps],
-       photonQValArray[numSteps];
-
-int i = 0;
-for(tailStart = minTailStart; tailStart <= MaxTailStart; tailStart += stepSize){
-    
-    cout << i << endl;
-    calculateQVals(tailStart, tailEnd, avgNeutronWaveform, avgPhotonWaveform,
-                   neutronQVal, photonQVal);
-        
-    tailStartArray[i] = tailStart;
-    neutronQValArray[i] = neutronQVal;
-    photonQValArray[i]  = photonQVal;
-    
-    i++;
+	int i = 0;
+	for(tailStart = minTailStart; tailStart <= maxTailStart; tailStart += stepSize){
+		
+		calculateQVal(tailStart, tailEnd, 
+					  avgNeutronWaveform, avgPhotonWaveform,
+					  neutronQVal, photonQVal);
+		cout << photonQVal << endl;
+		neutronGraph->SetPoint(i, tailStart, neutronQVal);
+		photonGraph ->SetPoint(i, tailStart, photonQVal );
+		
+		i++;
+	}
+	
+	TCanvas *c0 = new TCanvas("c0", "c0",800,500);
+	TMultiGraph *mg = new TMultiGraph();
+	
+	neutronGraph->SetLineColor(kRed);
+	mg->Add(neutronGraph, "l");
+	
+	photonGraph->SetLineColor(kBlue);
+	mg->Add(photonGraph,"l");
+	
+	mg->Draw("a");
+	
+	 c0->Modified();
+	 c0->Update();
+//	
 }

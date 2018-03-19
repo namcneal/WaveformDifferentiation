@@ -88,8 +88,8 @@ void generateAverageWaveforms(string dataFolderPath, string dataFileName, int nu
 	
 	// Create a file to store the averaged waveforms
 
-	cout <<  "Creating new ROOT file at " + dataFolderPath +  "/averaged_waveforms" << endl;
-	TFile* waveformFile = new TFile((dataFolderPath +  "/averaged_waveforms/" +  dataFileName + "_average_waveforms.root").c_str(), "RECREATE");
+	cout <<  "Creating new ROOT file at " + dataFolderPath +  "/average_waveforms" << endl;
+	TFile* waveformFile = new TFile((dataFolderPath +  "/average_waveforms/" +  dataFileName + "_average_waveforms.root").c_str(), "RECREATE");
 	cout << "Writing scatter plots, histograms, and X-profiles to file" << endl;
 
 	// Calculate the averages of the two histograms to obtain the averaged waveform and store the average to the file
@@ -101,7 +101,7 @@ void generateAverageWaveforms(string dataFolderPath, string dataFileName, int nu
 	
 	TCanvas* c0 = new TCanvas("0", "Normalized Neutron and Photon Waveforms, All Overlaid", 3200, 1200);
 	c0->Divide(2,1);
-	string plotName = dataFolderPath +  "/averaged_waveforms" + '/' + dataFileName + "_normalized_overlaid_waveforms_all.pdf";
+	string plotName = dataFolderPath +  "/average_waveforms" + '/' + dataFileName + "_normalized_overlaid_waveforms_all.pdf";
 	
 	sct_pts_neutron->SetMarkerStyle(6);
 	sct_pts_neutron->SetMarkerColor(kRed);
@@ -118,7 +118,7 @@ void generateAverageWaveforms(string dataFolderPath, string dataFileName, int nu
 	hist_n->Draw("COLZ1");
 	c0->cd(2);
 	hist_p->Draw("COLZ1");
-	c0->Print((plotName).c_str(), ".pdf"T);
+	c0->Print((plotName).c_str(), ".pdf");
 	
 	avgNeutronWf->SetMarkerColor(kRed);
 	avgPhotonWf->SetMarkerColor(kBlue);
